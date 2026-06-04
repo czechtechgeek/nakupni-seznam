@@ -20,6 +20,7 @@
     --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     --radius: 12px;
     --radius-sm: 8px;
+    --overlay: rgba(0,0,0,0.4);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -33,6 +34,7 @@
       --accent-dark: #34d399;
       --check-color: #10b981;
       --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --overlay: rgba(0,0,0,0.6);
     }
   }
   html, body { height: 100%; }
@@ -43,36 +45,85 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
   }
-  .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .container { max-width: 640px; margin: 0 auto; padding: 16px 16px 0; }
 
-  /* Header */
+  /* ─── Header ─────────────────────────────────── */
   .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 16px 0 8px;
+    gap: 10px;
+    padding: 12px 0 6px;
     position: sticky;
     top: 0;
     background: var(--bg);
     z-index: 10;
   }
-  .header h1 {
-    font-size: 22px;
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .header-brand h1 {
+    font-size: 20px;
     font-weight: 700;
     background: linear-gradient(135deg, var(--accent), var(--accent-dark));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    white-space: nowrap;
   }
-  .header-actions { display: flex; gap: 8px; }
+  .list-selector {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: border-color 0.15s;
+    max-width: 200px;
+  }
+  .list-selector:active { border-color: var(--accent); }
+  .list-selector .name {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+  .list-selector .arrow { font-size: 10px; color: var(--text-secondary); flex-shrink: 0; }
+  .header-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer; transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    color: var(--text);
+  }
+  .icon-btn:active { background: var(--border); }
+  .icon-btn.share-btn { color: var(--accent); }
 
-  /* Buttons */
+  /* ─── Buttons ────────────────────────────────── */
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 10px 18px;
     border: none;
     border-radius: var(--radius-sm);
     font-size: 14px;
@@ -81,12 +132,10 @@
     transition: all 0.15s ease;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    justify-content: center;
   }
   .btn:active { transform: scale(0.96); }
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-  }
+  .btn-primary { background: var(--accent); color: white; }
   .btn-primary:hover { background: var(--accent-dark); }
   .btn-secondary {
     background: var(--card);
@@ -94,19 +143,17 @@
     border: 1px solid var(--border);
   }
   .btn-secondary:hover { background: var(--border); }
-  .btn-danger {
-    background: #ef4444;
-    color: white;
-  }
+  .btn-danger { background: #ef4444; color: white; }
   .btn-danger:hover { background: #dc2626; }
-  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+  .btn-block { width: 100%; justify-content: center; }
 
-  /* Overall progress */
+  /* ─── Overall progress ───────────────────────── */
   .overall-progress {
     background: var(--card);
     border-radius: var(--radius);
     padding: 16px;
-    margin: 8px 0 16px;
+    margin: 6px 0 14px;
     box-shadow: var(--shadow);
   }
   .overall-stats {
@@ -115,16 +162,9 @@
     align-items: center;
     margin-bottom: 8px;
   }
-  .overall-stats .count {
-    font-size: 14px;
-    color: var(--text-secondary);
-  }
+  .overall-stats .count { font-size: 14px; color: var(--text-secondary); }
   .overall-stats .count strong { color: var(--text); font-weight: 700; }
-  .overall-stats .pct {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--accent);
-  }
+  .overall-stats .pct { font-size: 18px; font-weight: 700; color: var(--accent); }
   .bar-track {
     height: 6px;
     background: var(--border);
@@ -139,7 +179,7 @@
     width: 0%;
   }
 
-  /* Store sections */
+  /* ─── Store sections ─────────────────────────── */
   .store-section {
     background: var(--card);
     border-radius: var(--radius);
@@ -154,38 +194,14 @@
     padding: 14px 16px 10px;
     border-bottom: 1px solid var(--border);
   }
-  .store-name {
-    font-size: 16px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .store-emoji {
-    font-size: 20px;
-    line-height: 1;
-  }
-  .store-progress {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
+  .store-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .store-emoji { font-size: 20px; line-height: 1; }
+  .store-progress { font-size: 13px; color: var(--text-secondary); }
   .store-progress strong { color: var(--text); font-weight: 600; }
-  .store-bar {
-    margin: 0 16px 6px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .store-bar-fill {
-    height: 100%;
-    background: var(--accent);
-    border-radius: 2px;
-    transition: width 0.3s ease;
-    width: 0%;
-  }
+  .store-bar { margin: 0 16px 6px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .store-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; width: 0%; }
 
-  /* Items */
+  /* ─── Items ──────────────────────────────────── */
   .item-list { list-style: none; }
   .item {
     display: flex;
@@ -196,20 +212,16 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     user-select: none;
-    min-height: 44px;
+    min-height: 46px;
   }
   .item:active { background: var(--border); }
   .item + .item { border-top: 1px solid var(--border); }
   .item-check {
-    width: 24px;
-    height: 24px;
+    width: 24px; height: 24px;
     border: 2px solid var(--border);
     border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-right: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-right: 12px;
     transition: all 0.2s;
     font-size: 14px;
   }
@@ -218,30 +230,22 @@
     border-color: var(--check-color);
     color: white;
   }
-  .item-text {
-    flex: 1;
-    font-size: 16px;
-    transition: all 0.2s;
-  }
-  .item.checked .item-text {
-    text-decoration: line-through;
-    color: var(--text-secondary);
-  }
+  .item-text { flex: 1; font-size: 16px; transition: all 0.2s; }
+  .item.checked .item-text { text-decoration: line-through; color: var(--text-secondary); }
 
-  /* Import view */
+  /* ─── Views ──────────────────────────────────── */
   .view { display: none; }
   .view.active { display: block; }
 
-  .import-view {
-    padding-top: 8px;
-  }
+  /* ─── Import view ────────────────────────────── */
+  .import-view { padding-top: 4px; }
   .import-view textarea {
     width: 100%;
-    min-height: 260px;
+    min-height: 220px;
     padding: 14px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    font-family: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace;
     font-size: 15px;
     line-height: 1.6;
     resize: vertical;
@@ -249,70 +253,156 @@
     color: var(--text);
     transition: border-color 0.2s;
   }
-  .import-view textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
+  .import-view textarea:focus { outline: none; border-color: var(--accent); }
   .import-view textarea::placeholder { color: var(--text-secondary); }
   .import-hint {
     font-size: 13px;
     color: var(--text-secondary);
-    margin: 10px 0 14px;
+    margin: 8px 0 12px;
     padding: 10px 14px;
     background: var(--card);
     border-radius: var(--radius-sm);
     border: 1px dashed var(--border);
     line-height: 1.7;
   }
-  .import-hint code {
-    background: var(--border);
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-size: 12px;
-  }
-  .import-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .import-actions .btn { flex: 1; justify-content: center; }
+  .import-hint code { background: var(--border); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .import-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .import-actions .btn { flex: 1; }
 
-  /* Empty state */
+  /* ─── Empty state ────────────────────────────── */
   .empty-state {
     text-align: center;
-    padding: 60px 20px;
+    padding: 50px 20px 30px;
   }
-  .empty-state .emoji { font-size: 64px; margin-bottom: 16px; }
-  .empty-state h2 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  .empty-state p {
-    color: var(--text-secondary);
-    font-size: 15px;
-    margin-bottom: 24px;
-  }
+  .empty-state .emoji { font-size: 64px; margin-bottom: 14px; }
+  .empty-state h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .empty-state p { color: var(--text-secondary); font-size: 15px; margin-bottom: 20px; }
 
-  /* Footer */
-  .footer {
-    text-align: center;
-    padding: 32px 16px 24px;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .footer a { color: var(--accent); text-decoration: none; }
-
-  /* Clear button row */
+  /* ─── Actions row ────────────────────────────── */
   .actions-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     flex-wrap: wrap;
   }
-  .actions-row .btn { flex: 1; justify-content: center; }
+  .actions-row .btn { flex: 1; }
 
-  /* Toast */
+  /* ─── Modal / Overlay ────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: var(--radius) var(--radius) 0 0;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px;
+    border: none; background: var(--border);
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ─── List manager ───────────────────────────── */
+  .list-card {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    background: var(--bg);
+  }
+  .list-card:active { border-color: var(--accent); }
+  .list-card.active {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .list-card-info { flex: 1; min-width: 0; }
+  .list-card-name { font-size: 15px; font-weight: 600; }
+  .list-card-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .list-card-badge {
+    font-size: 11px;
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .list-card-delete {
+    width: 32px; height: 32px;
+    border: none; background: transparent;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-left: 4px;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .list-card-delete:active { color: #ef4444; }
+
+  .new-list-form { margin-top: 12px; }
+  .new-list-form input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    background: var(--card);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .new-list-form input:focus { outline: none; border-color: var(--accent); }
+  .new-list-form input::placeholder { color: var(--text-secondary); }
+
+  /* ─── Footer ─────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 28px 16px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* ─── Toast ──────────────────────────────────── */
   .toast {
     position: fixed;
     bottom: 24px;
@@ -327,15 +417,13 @@
     opacity: 0;
     transition: all 0.3s ease;
     pointer-events: none;
-    z-index: 100;
+    z-index: 200;
     white-space: nowrap;
+    max-width: 90vw;
   }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* Animations */
+  /* ─── Animations ─────────────────────────────── */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -343,24 +431,37 @@
   .store-section { animation: fadeIn 0.25s ease; }
 
   @media (max-width: 420px) {
-    .container { padding: 10px; }
-    .header h1 { font-size: 20px; }
-    .item { padding: 12px 12px; }
+    .container { padding: 10px 10px 0; }
+    .header { gap: 6px; }
+    .list-selector { max-width: 140px; padding: 5px 10px; }
+    .header-brand h1 { font-size: 18px; }
+    .icon-btn { width: 32px; height: 32px; font-size: 16px; }
+    .item { padding: 12px 12px; min-height: 44px; }
     .store-header { padding: 12px 12px 8px; }
     .store-bar { margin: 0 12px 4px; }
+    .modal { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
   }
 </style>
 </head>
 <body>
 <div class="container">
+  <!-- ─── Header ─────────────────────────────── -->
   <div class="header">
-    <h1>🛒 Nákupní seznam</h1>
+    <div class="header-brand" onclick="toggleListManager()">
+      <span style="font-size:22px">🛒</span>
+      <h1>Seznam</h1>
+    </div>
+    <div class="list-selector" onclick="toggleListManager()" id="listSelector">
+      <span class="name" id="selectorName">Můj seznam</span>
+      <span class="arrow">▼</span>
+    </div>
     <div class="header-actions">
-      <button class="btn btn-primary btn-sm" onclick="showImport()" id="btnNewList">+ Nový</button>
+      <button class="icon-btn share-btn" onclick="shareList()" id="shareBtn" title="Sdílet">📤</button>
+      <button class="icon-btn" onclick="showImport()" id="editBtn" title="Upravit">✏️</button>
     </div>
   </div>
 
-  <!-- List View -->
+  <!-- ─── List View ──────────────────────────── -->
   <div class="view active" id="listView">
     <div id="overallProgress" class="overall-progress" style="display:none">
       <div class="overall-stats">
@@ -371,8 +472,8 @@
     </div>
 
     <div class="actions-row" id="listActions" style="display:none">
-      <button class="btn btn-secondary btn-sm" onclick="clearChecked()">🗑 Smazat hotové</button>
-      <button class="btn btn-secondary btn-sm" onclick="showImport()">📝 Upravit seznam</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearChecked()">🗑 Hotové</button>
+      <button class="btn btn-secondary btn-sm" onclick="showImport()">📝 Upravit</button>
     </div>
 
     <div id="listContent"></div>
@@ -380,68 +481,84 @@
     <div class="empty-state" id="emptyState">
       <div class="emoji">📋</div>
       <h2>Žádný seznam</h2>
-      <p>Vložte svůj nákupní seznam — stačí zkopírovat z poznámek nebo messengeru.</p>
-      <button class="btn btn-primary" onclick="showImport()">+ Vytvořit seznam</button>
+      <p>Vytvořte si svůj první nákupní seznam.</p>
+      <button class="btn btn-primary btn-block" onclick="createNewList()">+ Nový seznam</button>
     </div>
 
     <div class="footer">
-      Data se ukládají jen ve vašem prohlížeči. 🛡️<br>
-      <a href="#" onclick="showImport()">Vytvořit nový seznam</a>
+      Data se ukládají jen ve vašem prohlížeči 🛡️
     </div>
   </div>
 
-  <!-- Import View -->
+  <!-- ─── Import View ────────────────────────── -->
   <div class="view import-view" id="importView">
-    <div class="import-hint">
-      <strong>Formát:</strong> Každý obchod napište jako nadpis, položky pod něj s <code>[ ]</code>.<br><br>
-      <strong>Příklad:</strong><br>
-      Lidl<br>
-      [ ] mléko<br>
-      [ ] chleba<br>
-      [ ] máslo<br><br>
-      Kaufland<br>
-      [ ] rýže<br>
-      [ ] těstoviny<br><br>
-      DM<br>
-      [ ] šampon<br>
-      [ ] pasta
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button class="btn btn-secondary btn-sm" onclick="cancelImport()">← Zpět</button>
+      <span style="font-size:16px;font-weight:600" id="importTitle">Upravit seznam</span>
     </div>
-    <textarea id="listInput" placeholder="Sem vložte svůj nákupní seznam..."></textarea>
+    <div class="import-hint">
+      <strong>Formát:</strong> Nadpis = obchod, <code>[ ]</code> = položka.<br>
+      <code>[x]</code> = už hotová položka.
+    </div>
+    <textarea id="listInput" placeholder="Lidl
+[ ] mléko
+[ ] chleba
+
+Kaufland
+[ ] rýže"></textarea>
     <div class="import-actions">
-      <button class="btn btn-secondary" onclick="cancelImport()">Zpět</button>
-      <button class="btn btn-primary" onclick="importList()">✓ Načíst seznam</button>
+      <button class="btn btn-primary btn-block" onclick="importList()">✓ Uložit seznam</button>
     </div>
   </div>
 </div>
 
+<!-- ─── Modal: List Manager ─────────────────── -->
+<div class="modal-overlay" id="listManager">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📂 Moje seznamy</h2>
+      <button class="modal-close" onclick="closeListManager()">✕</button>
+    </div>
+    <div id="listManagerContent"></div>
+    <div class="new-list-form">
+      <input type="text" id="newListName" placeholder="Název nového seznamu…" maxlength="60">
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="createNewList()">+ Vytvořit seznam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal: Confirm Delete ───────────────── -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>⚠️ Smazat seznam?</h2>
+      <button class="modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <p style="color:var(--text-secondary);margin-bottom:16px" id="confirmText"></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeConfirm()">Zrušit</button>
+      <button class="btn btn-danger" style="flex:1" id="confirmDeleteBtn">Smazat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Toast ───────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
 <script>
 // ─── State ──────────────────────────────────────────────
-const STORAGE_KEY = 'nakupni-seznam-data';
-let data = { stores: [] };
+const STORAGE_KEY = 'nakupni-seznam-v2';
+
+let appData = { lists: [], activeListId: null };
+let listIdCounter = 0;
 
 // Store emoji mapping
 const STORE_EMOJIS = {
-  'lidl': '🟡',
-  'kaufland': '🔵',
-  'dm': '🟣',
-  'penny': '🔴',
-  'tesco': '🔵',
-  'billa': '🟢',
-  'albert': '🟠',
-  'globus': '🟢',
-  'makro': '🔵',
-  'košík': '🟢',
-  'rohlík': '🟠',
-  'coop': '🟢',
-  'jednota': '🟢',
-  'normal': '🔵',
-  'ikea': '🟡',
-  'hornbach': '🟠',
-  'obi': '🟠',
-  'action': '🔴',
-  'tchibo': '🟢',
+  'lidl': '🟡', 'kaufland': '🔵', 'dm': '🟣', 'penny': '🔴',
+  'tesco': '🔵', 'billa': '🟢', 'albert': '🟠', 'globus': '🟢',
+  'makro': '🔵', 'košík': '🟢', 'rohlík': '🟠', 'coop': '🟢',
+  'jednota': '🟢', 'normal': '🔵', 'ikea': '🟡', 'hornbach': '🟠',
+  'obi': '🟠', 'action': '🔴', 'tchibo': '🟢',
 };
 const DEFAULT_EMOJI = '🛒';
 
@@ -459,15 +576,48 @@ function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && parsed.stores && Array.isArray(parsed.stores)) {
-        data = parsed;
+      if (parsed && parsed.lists && Array.isArray(parsed.lists)) {
+        appData = parsed;
+        // Recover highest ID
+        for (const list of parsed.lists) {
+          const n = parseInt(list.id);
+          if (n >= listIdCounter) listIdCounter = n + 1;
+        }
+        return;
       }
     }
   } catch (e) { /* ignore */ }
+  // First run — create a default list
+  appData = { lists: [], activeListId: null };
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+// ─── List helpers ──────────────────────────────────────
+function getActiveList() {
+  return appData.lists.find(l => l.id === appData.activeListId) || null;
+}
+
+function genId() {
+  return String(listIdCounter++);
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'právě teď';
+  if (diffMins < 60) return `před ${diffMins} min`;
+  if (diffHours < 24) return `před ${diffHours} h`;
+  if (diffDays === 1) return 'včera';
+  if (diffDays < 7) return `před ${diffDays} dny`;
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 // ─── Import / Parse ────────────────────────────────────
@@ -478,10 +628,7 @@ function parseList(text) {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
-    if (line.trim() === '') {
-      // blank line — keep current store
-      continue;
-    }
+    if (line.trim() === '') continue;
 
     const checkboxMatch = line.match(/^\[( |x|X| )\]\s*(.+)/);
     if (checkboxMatch) {
@@ -493,139 +640,18 @@ function parseList(text) {
       }
       currentStore.items.push({ text: itemText, checked });
     } else {
-      // Treat as store name (header)
-      const storeName = line.replace(/^[:*\s]+/, '').replace(/[:*\s]+$/, '').trim();
-      let name = storeName || 'Ostatní';
+      let name = line.replace(/^[:*\s]+/, '').replace(/[:*\s]+$/, '').trim();
       name = name.charAt(0).toUpperCase() + name.slice(1);
-      currentStore = { name, items: [] };
+      currentStore = { name: name || 'Ostatní', items: [] };
       stores.push(currentStore);
     }
   }
-
   return { stores };
 }
 
-function importList() {
-  const textarea = document.getElementById('listInput');
-  const text = textarea.value.trim();
-  if (!text) {
-    showToast('❌ Vložte prosím nějaké položky');
-    return;
-  }
-
-  data = parseList(text);
-  saveData();
-  showList();
-  showToast('✅ Seznam načten');
-}
-
-// ─── Render ────────────────────────────────────────────
-function showList() {
-  document.getElementById('importView').classList.remove('active');
-  document.getElementById('listView').classList.add('active');
-
-  const totalItems = data.stores.reduce((sum, s) => sum + s.items.length, 0);
-
-  if (totalItems === 0) {
-    document.getElementById('emptyState').style.display = 'block';
-    document.getElementById('listContent').innerHTML = '';
-    document.getElementById('overallProgress').style.display = 'none';
-    document.getElementById('listActions').style.display = 'none';
-    return;
-  }
-
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('overallProgress').style.display = 'block';
-  document.getElementById('listActions').style.display = 'flex';
-
-  // Overall stats
-  const doneTotal = data.stores.reduce((sum, s) => sum + s.items.filter(i => i.checked).length, 0);
-  const pct = totalItems > 0 ? Math.round((doneTotal / totalItems) * 100) : 0;
-  document.getElementById('doneCount').textContent = doneTotal;
-  document.getElementById('totalCount').textContent = totalItems;
-  document.getElementById('pctDisplay').textContent = pct + '%';
-  document.getElementById('overallBar').style.width = pct + '%';
-
-  // Render stores
-  let html = '';
-  for (let si = 0; si < data.stores.length; si++) {
-    const store = data.stores[si];
-    const done = store.items.filter(i => i.checked).length;
-    const total = store.items.length;
-    const storePct = total > 0 ? Math.round((done / total) * 100) : 0;
-    const emoji = getStoreEmoji(store.name);
-
-    html += `<div class="store-section" data-store="${si}">`;
-    html += `<div class="store-header">
-      <span class="store-name"><span class="store-emoji">${emoji}</span>${escapeHtml(store.name)}</span>
-      <span class="store-progress"><strong>${done}</strong>/${total}</span>
-    </div>`;
-    html += `<div class="store-bar"><div class="store-bar-fill" style="width:${storePct}%"></div></div>`;
-    html += `<ul class="item-list">`;
-
-    for (let ii = 0; ii < store.items.length; ii++) {
-      const item = store.items[ii];
-      html += `<li class="item${item.checked ? ' checked' : ''}" data-si="${si}" data-ii="${ii}" onclick="toggleItem(${si},${ii})">
-        <span class="item-check">${item.checked ? '✓' : ''}</span>
-        <span class="item-text">${escapeHtml(item.text)}</span>
-      </li>`;
-    }
-
-    html += `</ul></div>`;
-  }
-
-  document.getElementById('listContent').innerHTML = html;
-}
-
-// ─── Actions ───────────────────────────────────────────
-function toggleItem(si, ii) {
-  const store = data.stores[si];
-  if (!store || !store.items[ii]) return;
-  store.items[ii].checked = !store.items[ii].checked;
-  saveData();
-  showList();
-}
-
-function clearChecked() {
-  let cleared = 0;
-  for (const store of data.stores) {
-    const before = store.items.length;
-    store.items = store.items.filter(i => !i.checked);
-    cleared += before - store.items.length;
-  }
-  // Remove empty stores
-  data.stores = data.stores.filter(s => s.items.length > 0);
-  saveData();
-  showList();
-  if (cleared > 0) showToast(`✅ Smazáno ${cleared} hotových položek`);
-}
-
-function showImport() {
-  document.getElementById('listView').classList.remove('active');
-  document.getElementById('importView').classList.add('active');
-
-  // Pre-fill textarea with current list
-  const textarea = document.getElementById('listInput');
-  if (data.stores.length > 0) {
-    textarea.value = serializeList(data);
-  } else {
-    textarea.value = '';
-  }
-  textarea.focus();
-}
-
-function cancelImport() {
-  if (data.stores.length > 0) {
-    showList();
-  } else {
-    document.getElementById('importView').classList.remove('active');
-    document.getElementById('listView').classList.add('active');
-  }
-}
-
-function serializeList(data) {
+function serializeList(list) {
   const lines = [];
-  for (const store of data.stores) {
+  for (const store of list.stores) {
     lines.push(store.name);
     for (const item of store.items) {
       lines.push(`[${item.checked ? 'x' : ' '}] ${item.text}`);
@@ -635,6 +661,308 @@ function serializeList(data) {
   return lines.join('\n').trimEnd();
 }
 
+// ─── Import action ─────────────────────────────────────
+function importList() {
+  const textarea = document.getElementById('listInput');
+  const text = textarea.value.trim();
+  if (!text) { showToast('❌ Vložte položky'); return; }
+
+  const list = getActiveList();
+  if (!list) { showToast('❌ Žádný aktivní seznam'); return; }
+
+  const parsed = parseList(text);
+  list.stores = parsed.stores;
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+  showToast('✅ Seznam uložen');
+}
+
+// ─── List management ───────────────────────────────────
+function createNewList(name) {
+  const input = document.getElementById('newListName');
+  const listName = (name || input.value || '').trim() || `Seznam ${appData.lists.length + 1}`;
+  if (name) input.value = '';
+  else input.value = '';
+
+  const newList = {
+    id: genId(),
+    name: listName,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: [],
+  };
+  appData.lists.push(newList);
+  appData.activeListId = newList.id;
+  saveData();
+
+  // If the user created from the empty state (no items), show import
+  closeListManager();
+  render();
+}
+
+function switchList(id) {
+  appData.activeListId = id;
+  saveData();
+  closeListManager();
+  render();
+}
+
+function deleteList(id) {
+  const list = appData.lists.find(l => l.id === id);
+  if (!list) return;
+  closeConfirm();
+
+  appData.lists = appData.lists.filter(l => l.id !== id);
+  if (appData.activeListId === id) {
+    appData.activeListId = appData.lists.length > 0 ? appData.lists[0].id : null;
+  }
+  saveData();
+  render();
+  showToast(`🗑 Seznam smazán`);
+}
+
+function confirmDeleteList(id) {
+  const list = appData.lists.find(l => l.id === id);
+  if (!list) return;
+  document.getElementById('confirmText').textContent = `Opravdu chcete smazat seznam "${list.name}"? Všechny položky budou ztraceny.`;
+  document.getElementById('confirmDeleteBtn').onclick = () => deleteList(id);
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
+// ─── List Manager Modal ────────────────────────────────
+function toggleListManager() {
+  const el = document.getElementById('listManager');
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) {
+    renderListManager();
+    document.getElementById('newListName').focus();
+  }
+}
+
+function closeListManager() {
+  document.getElementById('listManager').classList.remove('active');
+}
+
+function renderListManager() {
+  const container = document.getElementById('listManagerContent');
+  if (appData.lists.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Zatím žádné seznamy</p>';
+    return;
+  }
+
+  let html = '';
+  for (const list of appData.lists) {
+    const totalItems = list.stores.reduce((s, st) => s + st.items.length, 0);
+    const doneItems = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+    const isActive = list.id === appData.activeListId;
+    html += `<div class="list-card${isActive ? ' active' : ''}" onclick="switchList('${list.id}')">
+      <div class="list-card-info">
+        <div class="list-card-name">${escapeHtml(list.name)}</div>
+        <div class="list-card-meta">${formatDate(list.updatedAt)} · ${totalItems} položek${totalItems > 0 ? ` (${doneItems} hotovo)` : ''}</div>
+      </div>
+      ${isActive ? '<span class="list-card-badge">Aktivní</span>' : ''}
+      <button class="list-card-delete" onclick="event.stopPropagation();confirmDeleteList('${list.id}')" title="Smazat">🗑</button>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ─── Share ─────────────────────────────────────────────
+function shareList() {
+  const list = getActiveList();
+  if (!list || list.stores.length === 0) { showToast('❌ Nic ke sdílení'); return; }
+
+  const listName = list.name;
+  const total = list.stores.reduce((s, st) => s + st.items.length, 0);
+  const done = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+
+  // Build text
+  let shareText = `🛒 ${listName}\n`;
+  if (total > 0) shareText += `${'─'.repeat(Math.min(listName.length + 4, 24))}\n📊 ${done}/${total} hotovo\n\n`;
+
+  for (const store of list.stores) {
+    const emoji = getStoreEmoji(store.name);
+    shareText += `${emoji} ${store.name}\n`;
+    for (const item of store.items) {
+      shareText += `${item.checked ? '✅' : '⬜'} ${item.text}\n`;
+    }
+    shareText += '\n';
+  }
+
+  shareText += `📱 Vyrobeno na nákupním seznamu\n🔗 https://czechtechgeek.github.io/nakupni-seznam/`;
+
+  // Try Web Share API first
+  if (navigator.share) {
+    navigator.share({
+      title: listName,
+      text: shareText,
+    }).catch(() => {
+      // User cancelled — do nothing
+    });
+  } else {
+    // Fallback: copy to clipboard
+    copyToClipboard(shareText);
+  }
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Zkopírováno do schránky');
+    }).catch(() => {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 Zkopírováno do schránky');
+  } catch (e) {
+    showToast('❌ Nepodařilo se zkopírovat');
+  }
+  document.body.removeChild(ta);
+}
+
+// ─── Render ────────────────────────────────────────────
+function render() {
+  const list = getActiveList();
+
+  // Update selector
+  document.getElementById('selectorName').textContent = list ? list.name : '—';
+
+  const totalItems = list ? list.stores.reduce((s, st) => s + st.items.length, 0) : 0;
+
+  if (!list || totalItems === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('listContent').innerHTML = '';
+    document.getElementById('overallProgress').style.display = 'none';
+    document.getElementById('listActions').style.display = 'none';
+    document.getElementById('shareBtn').style.opacity = '0.4';
+    document.getElementById('editBtn').style.opacity = '0.4';
+    if (!list) {
+      // No lists at all
+      document.querySelector('.empty-state .emoji').textContent = '📂';
+      document.querySelector('.empty-state h2').textContent = 'Žádné seznamy';
+      document.querySelector('.empty-state p').textContent = 'Vytvořte si svůj první nákupní seznam.';
+    } else {
+      document.querySelector('.empty-state .emoji').textContent = '📋';
+      document.querySelector('.empty-state h2').textContent = 'Prázdný seznam';
+      document.querySelector('.empty-state p').textContent = `"${escapeHtml(list.name)}" zatím nemá žádné položky. Vložte je přes Upravit.`;
+    }
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('overallProgress').style.display = 'block';
+  document.getElementById('listActions').style.display = 'flex';
+  document.getElementById('shareBtn').style.opacity = '1';
+  document.getElementById('editBtn').style.opacity = '1';
+
+  // Overall stats
+  const doneTotal = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+  const pct = Math.round((doneTotal / totalItems) * 100);
+  document.getElementById('doneCount').textContent = doneTotal;
+  document.getElementById('totalCount').textContent = totalItems;
+  document.getElementById('pctDisplay').textContent = pct + '%';
+  document.getElementById('overallBar').style.width = pct + '%';
+
+  // Render stores
+  let html = '';
+  for (let si = 0; si < list.stores.length; si++) {
+    const store = list.stores[si];
+    const done = store.items.filter(i => i.checked).length;
+    const total = store.items.length;
+    const storePct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const emoji = getStoreEmoji(store.name);
+
+    html += `<div class="store-section" data-store="${si}">
+      <div class="store-header">
+        <span class="store-name"><span class="store-emoji">${emoji}</span>${escapeHtml(store.name)}</span>
+        <span class="store-progress"><strong>${done}</strong>/${total}</span>
+      </div>
+      <div class="store-bar"><div class="store-bar-fill" style="width:${storePct}%"></div></div>
+      <ul class="item-list">`;
+
+    for (let ii = 0; ii < store.items.length; ii++) {
+      const item = store.items[ii];
+      html += `<li class="item${item.checked ? ' checked' : ''}" onclick="toggleItem(${si},${ii})">
+        <span class="item-check">${item.checked ? '✓' : ''}</span>
+        <span class="item-text">${escapeHtml(item.text)}</span>
+      </li>`;
+    }
+    html += `</ul></div>`;
+  }
+  document.getElementById('listContent').innerHTML = html;
+}
+
+// ─── Actions ───────────────────────────────────────────
+function toggleItem(si, ii) {
+  const list = getActiveList();
+  if (!list || !list.stores[si] || !list.stores[si].items[ii]) return;
+  list.stores[si].items[ii].checked = !list.stores[si].items[ii].checked;
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+}
+
+function clearChecked() {
+  const list = getActiveList();
+  if (!list) return;
+  let cleared = 0;
+  for (const store of list.stores) {
+    const before = store.items.length;
+    store.items = store.items.filter(i => !i.checked);
+    cleared += before - store.items.length;
+  }
+  list.stores = list.stores.filter(s => s.items.length > 0);
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+  if (cleared > 0) showToast(`✅ Smazáno ${cleared} hotových`);
+}
+
+function showImport() {
+  const list = getActiveList();
+  if (!list) { createNewList(); return; }
+
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('importView').classList.add('active');
+  document.getElementById('importTitle').textContent = `✏️ ${escapeHtml(list.name)}`;
+
+  const textarea = document.getElementById('listInput');
+  textarea.value = list.stores.length > 0 ? serializeList(list) : '';
+  // hide the keyboard after a tiny delay by focusing then maybe auto-focus was wrong
+  setTimeout(() => textarea.focus(), 100);
+}
+
+function cancelImport() {
+  if (getActiveList()) {
+    render();
+  } else {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('listContent').innerHTML = '';
+    document.getElementById('overallProgress').style.display = 'none';
+    document.getElementById('listActions').style.display = 'none';
+  }
+  document.getElementById('importView').classList.remove('active');
+  document.getElementById('listView').classList.add('active');
+}
+
 // ─── Toast ─────────────────────────────────────────────
 let toastTimer = null;
 function showToast(msg) {
@@ -642,7 +970,7 @@ function showToast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
 }
 
 // ─── Helpers ──────────────────────────────────────────
@@ -654,12 +982,28 @@ function escapeHtml(str) {
 
 // ─── Init ──────────────────────────────────────────────
 loadData();
-if (data.stores.length > 0 && data.stores.some(s => s.items.length > 0)) {
-  showList();
-} else {
-  // Show empty state
-  document.getElementById('emptyState').style.display = 'block';
+
+// If no lists exist, create one
+if (appData.lists.length === 0) {
+  const defaultList = {
+    id: genId(),
+    name: 'Můj seznam',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: [],
+  };
+  appData.lists.push(defaultList);
+  appData.activeListId = defaultList.id;
+  saveData();
 }
+
+// Ensure activeListId is valid
+if (!getActiveList() && appData.lists.length > 0) {
+  appData.activeListId = appData.lists[0].id;
+  saveData();
+}
+
+render();
 </script>
 </body>
 </html>
