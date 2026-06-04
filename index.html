@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nákupní seznam</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #059669;
+    --accent-light: #d1fae5;
+    --accent-dark: #047857;
+    --check-color: #059669;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #334155;
+      --accent: #10b981;
+      --accent-light: #064e3b;
+      --accent-dark: #34d399;
+      --check-color: #10b981;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 8px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+  /* Overall progress */
+  .overall-progress {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 8px 0 16px;
+    box-shadow: var(--shadow);
+  }
+  .overall-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .overall-stats .count {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .overall-stats .count strong { color: var(--text); font-weight: 700; }
+  .overall-stats .pct {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .bar-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Store sections */
+  .store-section {
+    background: var(--card);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .store-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .store-name {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .store-emoji {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .store-progress {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .store-progress strong { color: var(--text); font-weight: 600; }
+  .store-bar {
+    margin: 0 16px 6px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .store-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* Items */
+  .item-list { list-style: none; }
+  .item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 44px;
+  }
+  .item:active { background: var(--border); }
+  .item + .item { border-top: 1px solid var(--border); }
+  .item-check {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 12px;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+  .item.checked .item-check {
+    background: var(--check-color);
+    border-color: var(--check-color);
+    color: white;
+  }
+  .item-text {
+    flex: 1;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+  .item.checked .item-text {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+  }
+
+  /* Import view */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .import-view {
+    padding-top: 8px;
+  }
+  .import-view textarea {
+    width: 100%;
+    min-height: 260px;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    font-size: 15px;
+    line-height: 1.6;
+    resize: vertical;
+    background: var(--card);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .import-view textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .import-view textarea::placeholder { color: var(--text-secondary); }
+  .import-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 10px 0 14px;
+    padding: 10px 14px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border);
+    line-height: 1.7;
+  }
+  .import-hint code {
+    background: var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .import-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .import-actions .btn { flex: 1; justify-content: center; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-state .emoji { font-size: 64px; margin-bottom: 16px; }
+  .empty-state h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 32px 16px 24px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Clear button row */
+  .actions-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .actions-row .btn { flex: 1; justify-content: center; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .store-section { animation: fadeIn 0.25s ease; }
+
+  @media (max-width: 420px) {
+    .container { padding: 10px; }
+    .header h1 { font-size: 20px; }
+    .item { padding: 12px 12px; }
+    .store-header { padding: 12px 12px 8px; }
+    .store-bar { margin: 0 12px 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🛒 Nákupní seznam</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary btn-sm" onclick="showImport()" id="btnNewList">+ Nový</button>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div class="view active" id="listView">
+    <div id="overallProgress" class="overall-progress" style="display:none">
+      <div class="overall-stats">
+        <span class="count">Hotovo <strong id="doneCount">0</strong> / <strong id="totalCount">0</strong></span>
+        <span class="pct" id="pctDisplay">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overallBar"></div></div>
+    </div>
+
+    <div class="actions-row" id="listActions" style="display:none">
+      <button class="btn btn-secondary btn-sm" onclick="clearChecked()">🗑 Smazat hotové</button>
+      <button class="btn btn-secondary btn-sm" onclick="showImport()">📝 Upravit seznam</button>
+    </div>
+
+    <div id="listContent"></div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="emoji">📋</div>
+      <h2>Žádný seznam</h2>
+      <p>Vložte svůj nákupní seznam — stačí zkopírovat z poznámek nebo messengeru.</p>
+      <button class="btn btn-primary" onclick="showImport()">+ Vytvořit seznam</button>
+    </div>
+
+    <div class="footer">
+      Data se ukládají jen ve vašem prohlížeči. 🛡️<br>
+      <a href="#" onclick="showImport()">Vytvořit nový seznam</a>
+    </div>
+  </div>
+
+  <!-- Import View -->
+  <div class="view import-view" id="importView">
+    <div class="import-hint">
+      <strong>Formát:</strong> Každý obchod napište jako nadpis, položky pod něj s <code>[ ]</code>.<br><br>
+      <strong>Příklad:</strong><br>
+      Lidl<br>
+      [ ] mléko<br>
+      [ ] chleba<br>
+      [ ] máslo<br><br>
+      Kaufland<br>
+      [ ] rýže<br>
+      [ ] těstoviny<br><br>
+      DM<br>
+      [ ] šampon<br>
+      [ ] pasta
+    </div>
+    <textarea id="listInput" placeholder="Sem vložte svůj nákupní seznam..."></textarea>
+    <div class="import-actions">
+      <button class="btn btn-secondary" onclick="cancelImport()">Zpět</button>
+      <button class="btn btn-primary" onclick="importList()">✓ Načíst seznam</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────────────────
+const STORAGE_KEY = 'nakupni-seznam-data';
+let data = { stores: [] };
+
+// Store emoji mapping
+const STORE_EMOJIS = {
+  'lidl': '🟡',
+  'kaufland': '🔵',
+  'dm': '🟣',
+  'penny': '🔴',
+  'tesco': '🔵',
+  'billa': '🟢',
+  'albert': '🟠',
+  'globus': '🟢',
+  'makro': '🔵',
+  'košík': '🟢',
+  'rohlík': '🟠',
+  'coop': '🟢',
+  'jednota': '🟢',
+  'normal': '🔵',
+  'ikea': '🟡',
+  'hornbach': '🟠',
+  'obi': '🟠',
+  'action': '🔴',
+  'tchibo': '🟢',
+};
+const DEFAULT_EMOJI = '🛒';
+
+function getStoreEmoji(name) {
+  const lower = name.toLowerCase().trim();
+  for (const [key, emoji] of Object.entries(STORE_EMOJIS)) {
+    if (lower === key || lower.startsWith(key)) return emoji;
+  }
+  return DEFAULT_EMOJI;
+}
+
+// ─── Persistence ───────────────────────────────────────
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.stores && Array.isArray(parsed.stores)) {
+        data = parsed;
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ─── Import / Parse ────────────────────────────────────
+function parseList(text) {
+  const lines = text.split('\n');
+  const stores = [];
+  let currentStore = null;
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.trim() === '') {
+      // blank line — keep current store
+      continue;
+    }
+
+    const checkboxMatch = line.match(/^\[( |x|X| )\]\s*(.+)/);
+    if (checkboxMatch) {
+      const checked = checkboxMatch[1].toLowerCase() === 'x';
+      const itemText = checkboxMatch[2].trim();
+      if (!currentStore) {
+        currentStore = { name: 'Ostatní', items: [] };
+        stores.push(currentStore);
+      }
+      currentStore.items.push({ text: itemText, checked });
+    } else {
+      // Treat as store name (header)
+      const storeName = line.replace(/^[:*\s]+/, '').replace(/[:*\s]+$/, '').trim();
+      let name = storeName || 'Ostatní';
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+      currentStore = { name, items: [] };
+      stores.push(currentStore);
+    }
+  }
+
+  return { stores };
+}
+
+function importList() {
+  const textarea = document.getElementById('listInput');
+  const text = textarea.value.trim();
+  if (!text) {
+    showToast('❌ Vložte prosím nějaké položky');
+    return;
+  }
+
+  data = parseList(text);
+  saveData();
+  showList();
+  showToast('✅ Seznam načten');
+}
+
+// ─── Render ────────────────────────────────────────────
+function showList() {
+  document.getElementById('importView').classList.remove('active');
+  document.getElementById('listView').classList.add('active');
+
+  const totalItems = data.stores.reduce((sum, s) => sum + s.items.length, 0);
+
+  if (totalItems === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('listContent').innerHTML = '';
+    document.getElementById('overallProgress').style.display = 'none';
+    document.getElementById('listActions').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('overallProgress').style.display = 'block';
+  document.getElementById('listActions').style.display = 'flex';
+
+  // Overall stats
+  const doneTotal = data.stores.reduce((sum, s) => sum + s.items.filter(i => i.checked).length, 0);
+  const pct = totalItems > 0 ? Math.round((doneTotal / totalItems) * 100) : 0;
+  document.getElementById('doneCount').textContent = doneTotal;
+  document.getElementById('totalCount').textContent = totalItems;
+  document.getElementById('pctDisplay').textContent = pct + '%';
+  document.getElementById('overallBar').style.width = pct + '%';
+
+  // Render stores
+  let html = '';
+  for (let si = 0; si < data.stores.length; si++) {
+    const store = data.stores[si];
+    const done = store.items.filter(i => i.checked).length;
+    const total = store.items.length;
+    const storePct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const emoji = getStoreEmoji(store.name);
+
+    html += `<div class="store-section" data-store="${si}">`;
+    html += `<div class="store-header">
+      <span class="store-name"><span class="store-emoji">${emoji}</span>${escapeHtml(store.name)}</span>
+      <span class="store-progress"><strong>${done}</strong>/${total}</span>
+    </div>`;
+    html += `<div class="store-bar"><div class="store-bar-fill" style="width:${storePct}%"></div></div>`;
+    html += `<ul class="item-list">`;
+
+    for (let ii = 0; ii < store.items.length; ii++) {
+      const item = store.items[ii];
+      html += `<li class="item${item.checked ? ' checked' : ''}" data-si="${si}" data-ii="${ii}" onclick="toggleItem(${si},${ii})">
+        <span class="item-check">${item.checked ? '✓' : ''}</span>
+        <span class="item-text">${escapeHtml(item.text)}</span>
+      </li>`;
+    }
+
+    html += `</ul></div>`;
+  }
+
+  document.getElementById('listContent').innerHTML = html;
+}
+
+// ─── Actions ───────────────────────────────────────────
+function toggleItem(si, ii) {
+  const store = data.stores[si];
+  if (!store || !store.items[ii]) return;
+  store.items[ii].checked = !store.items[ii].checked;
+  saveData();
+  showList();
+}
+
+function clearChecked() {
+  let cleared = 0;
+  for (const store of data.stores) {
+    const before = store.items.length;
+    store.items = store.items.filter(i => !i.checked);
+    cleared += before - store.items.length;
+  }
+  // Remove empty stores
+  data.stores = data.stores.filter(s => s.items.length > 0);
+  saveData();
+  showList();
+  if (cleared > 0) showToast(`✅ Smazáno ${cleared} hotových položek`);
+}
+
+function showImport() {
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('importView').classList.add('active');
+
+  // Pre-fill textarea with current list
+  const textarea = document.getElementById('listInput');
+  if (data.stores.length > 0) {
+    textarea.value = serializeList(data);
+  } else {
+    textarea.value = '';
+  }
+  textarea.focus();
+}
+
+function cancelImport() {
+  if (data.stores.length > 0) {
+    showList();
+  } else {
+    document.getElementById('importView').classList.remove('active');
+    document.getElementById('listView').classList.add('active');
+  }
+}
+
+function serializeList(data) {
+  const lines = [];
+  for (const store of data.stores) {
+    lines.push(store.name);
+    for (const item of store.items) {
+      lines.push(`[${item.checked ? 'x' : ' '}] ${item.text}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n').trimEnd();
+}
+
+// ─── Toast ─────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── Helpers ──────────────────────────────────────────
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ─── Init ──────────────────────────────────────────────
+loadData();
+if (data.stores.length > 0 && data.stores.some(s => s.items.length > 0)) {
+  showList();
+} else {
+  // Show empty state
+  document.getElementById('emptyState').style.display = 'block';
+}
+</script>
+</body>
+</html>
