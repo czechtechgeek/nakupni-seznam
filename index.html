@@ -330,6 +330,54 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* ─── Share / action sheet buttons ──────────── */
+  .share-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    margin-bottom: 6px;
+  }
+  .share-option:active { background: var(--border); }
+  .share-option-icon {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .share-option-icon.url { background: #dbeafe; }
+  .share-option-icon.file { background: #fef3c7; }
+  .share-option-icon.text { background: #d1fae5; }
+  .share-option-icon.import { background: #e0e7ff; }
+  @media (prefers-color-scheme: dark) {
+    .share-option-icon.url { background: #1e3a5f; }
+    .share-option-icon.file { background: #4a3d1a; }
+    .share-option-icon.text { background: #064e3b; }
+    .share-option-icon.import { background: #1e1b4b; }
+  }
+  .share-option-info { flex: 1; min-width: 0; }
+  .share-option-title { font-size: 15px; font-weight: 600; }
+  .share-option-desc { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ─── URL import banner ─────────────────────── */
+  .hash-banner {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  .hash-banner h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .hash-banner p { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+  .hash-banner .btn { margin-right: 8px; }
+
   /* ─── List manager ───────────────────────────── */
   .list-card {
     display: flex;
@@ -456,13 +504,16 @@
       <span class="arrow">▼</span>
     </div>
     <div class="header-actions">
-      <button class="icon-btn share-btn" onclick="shareList()" id="shareBtn" title="Sdílet">📤</button>
+      <button class="icon-btn share-btn" onclick="openShareDialog()" id="shareBtn" title="Sdílet">📤</button>
       <button class="icon-btn" onclick="showImport()" id="editBtn" title="Upravit">✏️</button>
     </div>
   </div>
 
   <!-- ─── List View ──────────────────────────── -->
   <div class="view active" id="listView">
+    <!-- URL import banner (shown when list loaded from shared link) -->
+    <div id="hashBanner" style="display:none"></div>
+
     <div id="overallProgress" class="overall-progress" style="display:none">
       <div class="overall-stats">
         <span class="count">Hotovo <strong id="doneCount">0</strong> / <strong id="totalCount">0</strong></span>
@@ -512,6 +563,50 @@ Kaufland
   </div>
 </div>
 
+<!-- ─── Modal: Share (action sheet) ──────────── -->
+<div class="modal-overlay" id="shareDialog">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📤 Sdílet seznam</h2>
+      <button class="modal-close" onclick="closeShareDialog()">✕</button>
+    </div>
+
+    <div id="shareUrlOption" class="share-option" onclick="shareViaUrl()">
+      <div class="share-option-icon url">🔗</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Sdílet odkazem</div>
+        <div class="share-option-desc">Vygeneruje odkaz — pošlete ho přes WhatsApp, Messenger…</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="exportFile()">
+      <div class="share-option-icon file">📁</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Exportovat soubor</div>
+        <div class="share-option-desc">Stáhne .txt soubor k odeslání nebo zálohování</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="copyTextOnly()">
+      <div class="share-option-icon text">📋</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Zkopírovat text</div>
+        <div class="share-option-desc">Zkopíruje seznam jako text do schránky</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="importFile()">
+      <div class="share-option-icon import">📂</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Importovat soubor</div>
+        <div class="share-option-desc">Nahrát .txt seznam od někoho jiného</div>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary btn-block" onclick="closeShareDialog()" style="margin-top:8px">Zrušit</button>
+  </div>
+</div>
+
 <!-- ─── Modal: List Manager ─────────────────── -->
 <div class="modal-overlay" id="listManager">
   <div class="modal" onclick="event.stopPropagation()">
@@ -542,12 +637,16 @@ Kaufland
   </div>
 </div>
 
+<!-- ─── Hidden file input ───────────────────── -->
+<input type="file" id="fileInput" accept=".txt" style="display:none" onchange="handleFileImport(event)">
+
 <!-- ─── Toast ───────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
 <script>
 // ─── State ──────────────────────────────────────────────
 const STORAGE_KEY = 'nakupni-seznam-v2';
+const APP_URL = 'https://czechtechgeek.github.io/nakupni-seznam/';
 
 let appData = { lists: [], activeListId: null };
 let listIdCounter = 0;
@@ -578,7 +677,6 @@ function loadData() {
       const parsed = JSON.parse(saved);
       if (parsed && parsed.lists && Array.isArray(parsed.lists)) {
         appData = parsed;
-        // Recover highest ID
         for (const list of parsed.lists) {
           const n = parseInt(list.id);
           if (n >= listIdCounter) listIdCounter = n + 1;
@@ -587,7 +685,6 @@ function loadData() {
       }
     }
   } catch (e) { /* ignore */ }
-  // First run — create a default list
   appData = { lists: [], activeListId: null };
 }
 
@@ -600,9 +697,7 @@ function getActiveList() {
   return appData.lists.find(l => l.id === appData.activeListId) || null;
 }
 
-function genId() {
-  return String(listIdCounter++);
-}
+function genId() { return String(listIdCounter++); }
 
 function formatDate(iso) {
   const d = new Date(iso);
@@ -611,7 +706,6 @@ function formatDate(iso) {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-
   if (diffMins < 1) return 'právě teď';
   if (diffMins < 60) return `před ${diffMins} min`;
   if (diffHours < 24) return `před ${diffHours} h`;
@@ -682,8 +776,7 @@ function importList() {
 function createNewList(name) {
   const input = document.getElementById('newListName');
   const listName = (name || input.value || '').trim() || `Seznam ${appData.lists.length + 1}`;
-  if (name) input.value = '';
-  else input.value = '';
+  input.value = '';
 
   const newList = {
     id: genId(),
@@ -695,8 +788,6 @@ function createNewList(name) {
   appData.lists.push(newList);
   appData.activeListId = newList.id;
   saveData();
-
-  // If the user created from the empty state (no items), show import
   closeListManager();
   render();
 }
@@ -712,7 +803,6 @@ function deleteList(id) {
   const list = appData.lists.find(l => l.id === id);
   if (!list) return;
   closeConfirm();
-
   appData.lists = appData.lists.filter(l => l.id !== id);
   if (appData.activeListId === id) {
     appData.activeListId = appData.lists.length > 0 ? appData.lists[0].id : null;
@@ -754,7 +844,6 @@ function renderListManager() {
     container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Zatím žádné seznamy</p>';
     return;
   }
-
   let html = '';
   for (const list of appData.lists) {
     const totalItems = list.stores.reduce((s, st) => s + st.items.length, 0);
@@ -772,51 +861,232 @@ function renderListManager() {
   container.innerHTML = html;
 }
 
-// ─── Share ─────────────────────────────────────────────
-function shareList() {
+// ─── SHARE & EXPORT / IMPORT ───────────────────────────
+
+// Open share dialog (action sheet)
+function openShareDialog() {
   const list = getActiveList();
   if (!list || list.stores.length === 0) { showToast('❌ Nic ke sdílení'); return; }
+  document.getElementById('shareDialog').classList.add('active');
+}
 
-  const listName = list.name;
-  const total = list.stores.reduce((s, st) => s + st.items.length, 0);
-  const done = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+function closeShareDialog() {
+  document.getElementById('shareDialog').classList.remove('active');
+}
 
-  // Build text
-  let shareText = `🛒 ${listName}\n`;
-  if (total > 0) shareText += `${'─'.repeat(Math.min(listName.length + 4, 24))}\n📊 ${done}/${total} hotovo\n\n`;
+// ─── 1) Share via URL ─────────────────────────
+function shareViaUrl() {
+  const list = getActiveList();
+  if (!list) return;
 
-  for (const store of list.stores) {
-    const emoji = getStoreEmoji(store.name);
-    shareText += `${emoji} ${store.name}\n`;
-    for (const item of store.items) {
-      shareText += `${item.checked ? '✅' : '⬜'} ${item.text}\n`;
-    }
-    shareText += '\n';
-  }
+  const data = {
+    n: list.name,
+    s: list.stores.map(st => ({
+      n: st.name,
+      i: st.items.map(it => ({ t: it.text, c: it.checked }))
+    }))
+  };
 
-  shareText += `📱 Vyrobeno na nákupním seznamu\n🔗 https://czechtechgeek.github.io/nakupni-seznam/`;
+  // Compact base64 encoding with Unicode support
+  const json = JSON.stringify(data);
+  const bytes = new TextEncoder().encode(json);
+  const binary = String.fromCharCode(...bytes);
+  const encoded = btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
-  // Try Web Share API first
+  const url = APP_URL + '#v1:' + encoded;
+
+  closeShareDialog();
+
+  // On mobile — use Web Share API to share the URL natively
   if (navigator.share) {
     navigator.share({
-      title: listName,
-      text: shareText,
-    }).catch(() => {
-      // User cancelled — do nothing
-    });
+      title: `Nákupní seznam: ${list.name}`,
+      text: `🛒 Sdílím ti nákupní seznam "${list.name}"`,
+      url: url,
+    }).catch(() => {});
   } else {
-    // Fallback: copy to clipboard
-    copyToClipboard(shareText);
+    // Desktop — copy URL to clipboard
+    copyToClipboard(url);
+    showToast('🔗 Odkaz zkopírován');
   }
 }
 
+// ─── 2) Export as .txt file ───────────────────
+function exportFile() {
+  const list = getActiveList();
+  if (!list) return;
+  closeShareDialog();
+
+  const text = serializeList(list);
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${list.name.replace(/[^a-zá-ž0-9]/gi, '_')}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  showToast('📁 Soubor stažen');
+}
+
+// ─── 3) Copy text ─────────────────────────────
+function copyTextOnly() {
+  const list = getActiveList();
+  if (!list) return;
+  closeShareDialog();
+  shareAsText(list);
+}
+
+function shareAsText(list) {
+  const total = list.stores.reduce((s, st) => s + st.items.length, 0);
+  const done = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+
+  let text = `🛒 ${list.name}\n`;
+  text += `${'─'.repeat(Math.min(list.name.length + 4, 24))}\n📊 ${done}/${total} hotovo\n\n`;
+
+  for (const store of list.stores) {
+    const emoji = getStoreEmoji(store.name);
+    text += `${emoji} ${store.name}\n`;
+    for (const item of store.items) {
+      text += `${item.checked ? '✅' : '⬜'} ${item.text}\n`;
+    }
+    text += '\n';
+  }
+  text += `📱 Vyrobeno na ${APP_URL}`;
+
+  // On mobile — Web Share API
+  if (navigator.share) {
+    navigator.share({ title: list.name, text }).catch(() => {});
+  } else {
+    copyToClipboard(text);
+    showToast('📋 Text zkopírován');
+  }
+}
+
+// ─── 4) Import from .txt file ─────────────────
+function importFile() {
+  closeShareDialog();
+  document.getElementById('fileInput').click();
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = ''; // reset so same file can be re-imported
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result.trim();
+    if (!text) { showToast('❌ Prázdný soubor'); return; }
+
+    const list = getActiveList();
+    if (!list) {
+      // Create a new list automatically
+      const name = file.name.replace(/\.txt$/i, '').replace(/_/g, ' ');
+      createNewList(name);
+    }
+
+    const activeList = getActiveList();
+    if (!activeList) return;
+
+    const parsed = parseList(text);
+    activeList.stores = parsed.stores;
+    activeList.updatedAt = new Date().toISOString();
+    saveData();
+    render();
+    showToast(`✅ Načteno ze souboru: ${file.name}`);
+  };
+  reader.readAsText(file);
+}
+
+// ─── URL hash import ────────────────────────────────────
+function checkUrlHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+
+  // Format: #v1:base64data
+  if (!hash.startsWith('v1:')) return;
+
+  try {
+    const encoded = hash.slice(3);
+    // Restore base64url → base64
+    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    // Pad with =
+    const padding = 4 - (base64.length % 4);
+    const padded = padding < 4 ? base64 + '='.repeat(padding) : base64;
+
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    const data = JSON.parse(json);
+
+    if (!data || !data.s || !Array.isArray(data.s)) return;
+
+    const stores = data.s.map(st => ({
+      name: st.n || 'Ostatní',
+      items: (st.i || []).map(it => ({ text: it.t || '', checked: it.c || false }))
+    }));
+
+    const listName = data.n || 'Sdílený seznam';
+
+    // Show banner asking user to confirm import
+    const total = stores.reduce((s, st) => s + st.items.length, 0);
+    const storeNames = stores.map(st => st.name).join(', ');
+
+    const banner = document.getElementById('hashBanner');
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <h3>🔗 Sdílený seznam</h3>
+      <p><strong>${escapeHtml(listName)}</strong> — ${total} položek ${storeNames ? '· ' + escapeHtml(storeNames) : ''}</p>
+      <button class="btn btn-primary btn-sm" onclick="acceptSharedList()">✓ Načíst seznam</button>
+      <button class="btn btn-secondary btn-sm" onclick="dismissSharedList()">Zahodit</button>
+    `;
+
+    // Store the parsed data for later acceptance
+    window._sharedListData = { name: listName, stores };
+
+    // Clear hash so it doesn't re-trigger
+    window.location.hash = '';
+  } catch (e) {
+    console.warn('Failed to decode shared list:', e);
+  }
+}
+
+function acceptSharedList() {
+  const data = window._sharedListData;
+  if (!data) return;
+
+  document.getElementById('hashBanner').style.display = 'none';
+
+  // Create a new list from the shared data
+  const newList = {
+    id: genId(),
+    name: data.name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: data.stores,
+  };
+  appData.lists.push(newList);
+  appData.activeListId = newList.id;
+  saveData();
+  render();
+  showToast(`✅ Seznam "${data.name}" načten`);
+  window._sharedListData = null;
+}
+
+function dismissSharedList() {
+  document.getElementById('hashBanner').style.display = 'none';
+  window._sharedListData = null;
+}
+
+// ─── Clipboard helper ──────────────────────────────────
 function copyToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast('📋 Zkopírováno do schránky');
-    }).catch(() => {
-      fallbackCopy(text);
-    });
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
   }
@@ -829,12 +1099,7 @@ function fallbackCopy(text) {
   ta.style.opacity = '0';
   document.body.appendChild(ta);
   ta.select();
-  try {
-    document.execCommand('copy');
-    showToast('📋 Zkopírováno do schránky');
-  } catch (e) {
-    showToast('❌ Nepodařilo se zkopírovat');
-  }
+  try { document.execCommand('copy'); } catch (e) { /* fail silently */ }
   document.body.removeChild(ta);
 }
 
@@ -842,7 +1107,6 @@ function fallbackCopy(text) {
 function render() {
   const list = getActiveList();
 
-  // Update selector
   document.getElementById('selectorName').textContent = list ? list.name : '—';
 
   const totalItems = list ? list.stores.reduce((s, st) => s + st.items.length, 0) : 0;
@@ -855,14 +1119,13 @@ function render() {
     document.getElementById('shareBtn').style.opacity = '0.4';
     document.getElementById('editBtn').style.opacity = '0.4';
     if (!list) {
-      // No lists at all
       document.querySelector('.empty-state .emoji').textContent = '📂';
       document.querySelector('.empty-state h2').textContent = 'Žádné seznamy';
       document.querySelector('.empty-state p').textContent = 'Vytvořte si svůj první nákupní seznam.';
     } else {
       document.querySelector('.empty-state .emoji').textContent = '📋';
       document.querySelector('.empty-state h2').textContent = 'Prázdný seznam';
-      document.querySelector('.empty-state p').textContent = `"${escapeHtml(list.name)}" zatím nemá žádné položky. Vložte je přes Upravit.`;
+      document.querySelector('.empty-state p').textContent = `"${escapeHtml(list.name)}" zatím nemá žádné položky.`;
     }
     return;
   }
@@ -873,7 +1136,6 @@ function render() {
   document.getElementById('shareBtn').style.opacity = '1';
   document.getElementById('editBtn').style.opacity = '1';
 
-  // Overall stats
   const doneTotal = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
   const pct = Math.round((doneTotal / totalItems) * 100);
   document.getElementById('doneCount').textContent = doneTotal;
@@ -881,7 +1143,6 @@ function render() {
   document.getElementById('pctDisplay').textContent = pct + '%';
   document.getElementById('overallBar').style.width = pct + '%';
 
-  // Render stores
   let html = '';
   for (let si = 0; si < list.stores.length; si++) {
     const store = list.stores[si];
@@ -890,7 +1151,7 @@ function render() {
     const storePct = total > 0 ? Math.round((done / total) * 100) : 0;
     const emoji = getStoreEmoji(store.name);
 
-    html += `<div class="store-section" data-store="${si}">
+    html += `<div class="store-section">
       <div class="store-header">
         <span class="store-name"><span class="store-emoji">${emoji}</span>${escapeHtml(store.name)}</span>
         <span class="store-progress"><strong>${done}</strong>/${total}</span>
@@ -946,7 +1207,6 @@ function showImport() {
 
   const textarea = document.getElementById('listInput');
   textarea.value = list.stores.length > 0 ? serializeList(list) : '';
-  // hide the keyboard after a tiny delay by focusing then maybe auto-focus was wrong
   setTimeout(() => textarea.focus(), 100);
 }
 
@@ -983,7 +1243,6 @@ function escapeHtml(str) {
 // ─── Init ──────────────────────────────────────────────
 loadData();
 
-// If no lists exist, create one
 if (appData.lists.length === 0) {
   const defaultList = {
     id: genId(),
@@ -997,13 +1256,15 @@ if (appData.lists.length === 0) {
   saveData();
 }
 
-// Ensure activeListId is valid
 if (!getActiveList() && appData.lists.length > 0) {
   appData.activeListId = appData.lists[0].id;
   saveData();
 }
 
 render();
+
+// Check if the page was opened with a shared list URL
+checkUrlHash();
 </script>
 </body>
 </html>
