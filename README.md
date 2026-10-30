@@ -5,6 +5,7 @@ Jednoduchý nákupní seznam jako jediná HTML stránka — bez serveru, bez dat
 ## Co umí
 
 - Přidávání položek s množstvím a kategorií
+- Rychlé přidání tlačítkem **+** (Enter funguje taky) a odebrání tlačítkem **−** u každé položky
 - Odškrtávání nakoupeného, mazání, řazení
 - Světlý a tmavý režim podle nastavení systému
 - Funguje offline (vše je v jednom souboru)
