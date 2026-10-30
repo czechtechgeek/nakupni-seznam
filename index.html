@@ -231,6 +231,33 @@
     color: white;
   }
   .item-text { flex: 1; font-size: 16px; transition: all 0.2s; }
+
+  .quick-add { display: flex; gap: 8px; margin-bottom: 14px; align-items: stretch; }
+  .quick-add input {
+    flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 11px 13px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card); color: var(--text);
+  }
+  .quick-add input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .quick-add select {
+    font: inherit; font-size: 15px; padding: 0 10px; max-width: 42%;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--card); color: var(--text);
+  }
+  .quick-btn {
+    width: 48px; min-width: 48px; font-size: 26px; line-height: 1; font-weight: 600;
+    color: #fff; background: var(--accent); border: none; border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .quick-btn:active { background: var(--accent-dark); }
+
+  .item-del {
+    width: 34px; min-width: 34px; height: 34px; margin-left: 10px;
+    font-size: 20px; line-height: 1; font-weight: 600;
+    color: var(--text-secondary); background: transparent;
+    border: 1px solid var(--border); border-radius: 50%; cursor: pointer;
+  }
+  .item-del:active { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
   .item.checked .item-text { text-decoration: line-through; color: var(--text-secondary); }
 
   /* ─── Views ──────────────────────────────────── */
@@ -513,6 +540,13 @@
   <div class="view active" id="listView">
     <!-- URL import banner (shown when list loaded from shared link) -->
     <div id="hashBanner" style="display:none"></div>
+
+    <div class="quick-add" id="quickAdd" style="display:none">
+      <input id="quickInput" type="text" placeholder="Přidat položku…" autocomplete="off"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();quickAdd();}">
+      <select id="quickStore" title="Obchod"></select>
+      <button class="quick-btn" id="quickAddBtn" onclick="quickAdd()" aria-label="Přidat položku">+</button>
+    </div>
 
     <div id="overallProgress" class="overall-progress" style="display:none">
       <div class="overall-stats">
@@ -1103,9 +1137,67 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
+// ─── Quick add / remove ────────────────────────────────
+function ensureStoreSelect(list) {
+  const sel = document.getElementById('quickStore');
+  const names = list.stores.map(s => s.name);
+  const prev = sel.value || appData.lastStore || '';
+  let html = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  html += '<option value="__new">＋ nový obchod…</option>';
+  sel.innerHTML = html;
+  if (names.includes(prev)) sel.value = prev;
+  else if (names.length) sel.value = names[names.length - 1];
+}
+
+function quickAdd() {
+  const input = document.getElementById('quickInput');
+  const raw = input.value.trim();
+  if (!raw) { input.focus(); return; }
+  const list = getActiveList();
+  if (!list) return;
+
+  let name = document.getElementById('quickStore').value;
+  if (!name || name === '__new') {
+    if (list.stores.length === 0) {
+      name = list.name;                       // první položka jde do seznamu
+    } else {
+      name = prompt('Do kterého obchodu přidat?', list.stores[list.stores.length - 1].name);
+      if (!name || !name.trim()) return;
+      name = name.trim();
+    }
+  }
+
+  let store = list.stores.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (!store) { store = { name: name, items: [] }; list.stores.push(store); }
+  store.items.push({ text: raw.charAt(0).toUpperCase() + raw.slice(1), checked: false });
+
+  list.updatedAt = new Date().toISOString();
+  appData.lastStore = store.name;
+  saveData();
+  render();
+  input.value = '';
+  input.focus();
+  showToast('➕ ' + raw);
+}
+
+function removeItem(si, ii) {
+  const list = getActiveList();
+  if (!list || !list.stores[si] || !list.stores[si].items[ii]) return;
+  const removed = list.stores[si].items.splice(ii, 1)[0];
+  if (list.stores[si].items.length === 0) list.stores.splice(si, 1);
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+  showToast('🗑 ' + removed.text);
+}
+
 // ─── Render ────────────────────────────────────────────
 function render() {
   const list = getActiveList();
+
+  const qa = document.getElementById('quickAdd');
+  qa.style.display = list ? 'flex' : 'none';
+  if (list) ensureStoreSelect(list);
 
   document.getElementById('selectorName').textContent = list ? list.name : '—';
 
@@ -1164,6 +1256,8 @@ function render() {
       html += `<li class="item${item.checked ? ' checked' : ''}" onclick="toggleItem(${si},${ii})">
         <span class="item-check">${item.checked ? '✓' : ''}</span>
         <span class="item-text">${escapeHtml(item.text)}</span>
+        <button class="item-del" title="Odebrat" aria-label="Odebrat ${escapeHtml(item.text)}"
+                onclick="event.stopPropagation();removeItem(${si},${ii})">−</button>
       </li>`;
     }
     html += `</ul></div>`;
