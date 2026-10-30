@@ -1,0 +1,14 @@
+name: "Nákupní seznam"
+version: "1.0.0"
+slug: "nakupni_seznam"
+description: "Jednoduchý nákupní seznam do postranního panelu Home Assistantu"
+url: "https://github.com/czechtechgeek/nakupni-seznam"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+ingress: true
+ingress_port: 8091
+panel_icon: "mdi:cart-outline"
+panel_title: "Nákupy"
+panel_admin: false

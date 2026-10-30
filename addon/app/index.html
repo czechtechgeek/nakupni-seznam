@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nákupní seznam</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #059669;
+    --accent-light: #d1fae5;
+    --accent-dark: #047857;
+    --check-color: #059669;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --overlay: rgba(0,0,0,0.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #334155;
+      --accent: #10b981;
+      --accent-light: #064e3b;
+      --accent-dark: #34d399;
+      --check-color: #10b981;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --overlay: rgba(0,0,0,0.6);
+    }
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+  }
+  .container { max-width: 640px; margin: 0 auto; padding: 16px 16px 0; }
+
+  /* ─── Header ─────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 6px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .header-brand h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+  }
+  .list-selector {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: border-color 0.15s;
+    max-width: 200px;
+  }
+  .list-selector:active { border-color: var(--accent); }
+  .list-selector .name {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+  .list-selector .arrow { font-size: 10px; color: var(--text-secondary); flex-shrink: 0; }
+  .header-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: 18px;
+    cursor: pointer; transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    color: var(--text);
+  }
+  .icon-btn:active { background: var(--border); }
+  .icon-btn.share-btn { color: var(--accent); }
+
+  /* ─── Buttons ────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    justify-content: center;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+  .btn-block { width: 100%; justify-content: center; }
+
+  /* ─── Overall progress ───────────────────────── */
+  .overall-progress {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 6px 0 14px;
+    box-shadow: var(--shadow);
+  }
+  .overall-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .overall-stats .count { font-size: 14px; color: var(--text-secondary); }
+  .overall-stats .count strong { color: var(--text); font-weight: 700; }
+  .overall-stats .pct { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .bar-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ─── Store sections ─────────────────────────── */
+  .store-section {
+    background: var(--card);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .store-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .store-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .store-emoji { font-size: 20px; line-height: 1; }
+  .store-progress { font-size: 13px; color: var(--text-secondary); }
+  .store-progress strong { color: var(--text); font-weight: 600; }
+  .store-bar { margin: 0 16px 6px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .store-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; width: 0%; }
+
+  /* ─── Items ──────────────────────────────────── */
+  .item-list { list-style: none; }
+  .item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-height: 46px;
+  }
+  .item:active { background: var(--border); }
+  .item + .item { border-top: 1px solid var(--border); }
+  .item-check {
+    width: 24px; height: 24px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-right: 12px;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+  .item.checked .item-check {
+    background: var(--check-color);
+    border-color: var(--check-color);
+    color: white;
+  }
+  .item-text { flex: 1; font-size: 16px; transition: all 0.2s; }
+  .item.checked .item-text { text-decoration: line-through; color: var(--text-secondary); }
+
+  /* ─── Views ──────────────────────────────────── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ─── Import view ────────────────────────────── */
+  .import-view { padding-top: 4px; }
+  .import-view textarea {
+    width: 100%;
+    min-height: 220px;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace;
+    font-size: 15px;
+    line-height: 1.6;
+    resize: vertical;
+    background: var(--card);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .import-view textarea:focus { outline: none; border-color: var(--accent); }
+  .import-view textarea::placeholder { color: var(--text-secondary); }
+  .import-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 8px 0 12px;
+    padding: 10px 14px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border);
+    line-height: 1.7;
+  }
+  .import-hint code { background: var(--border); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .import-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .import-actions .btn { flex: 1; }
+
+  /* ─── Empty state ────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px 30px;
+  }
+  .empty-state .emoji { font-size: 64px; margin-bottom: 14px; }
+  .empty-state h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .empty-state p { color: var(--text-secondary); font-size: 15px; margin-bottom: 20px; }
+
+  /* ─── Actions row ────────────────────────────── */
+  .actions-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .actions-row .btn { flex: 1; }
+
+  /* ─── Modal / Overlay ────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: var(--radius) var(--radius) 0 0;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px;
+    border: none; background: var(--border);
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ─── Share / action sheet buttons ──────────── */
+  .share-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    margin-bottom: 6px;
+  }
+  .share-option:active { background: var(--border); }
+  .share-option-icon {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .share-option-icon.url { background: #dbeafe; }
+  .share-option-icon.file { background: #fef3c7; }
+  .share-option-icon.text { background: #d1fae5; }
+  .share-option-icon.import { background: #e0e7ff; }
+  @media (prefers-color-scheme: dark) {
+    .share-option-icon.url { background: #1e3a5f; }
+    .share-option-icon.file { background: #4a3d1a; }
+    .share-option-icon.text { background: #064e3b; }
+    .share-option-icon.import { background: #1e1b4b; }
+  }
+  .share-option-info { flex: 1; min-width: 0; }
+  .share-option-title { font-size: 15px; font-weight: 600; }
+  .share-option-desc { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ─── URL import banner ─────────────────────── */
+  .hash-banner {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  .hash-banner h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .hash-banner p { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+  .hash-banner .btn { margin-right: 8px; }
+
+  /* ─── List manager ───────────────────────────── */
+  .list-card {
+    display: flex;
+    align-items: center;
+    padding: 14px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    background: var(--bg);
+  }
+  .list-card:active { border-color: var(--accent); }
+  .list-card.active {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .list-card-info { flex: 1; min-width: 0; }
+  .list-card-name { font-size: 15px; font-weight: 600; }
+  .list-card-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .list-card-badge {
+    font-size: 11px;
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .list-card-delete {
+    width: 32px; height: 32px;
+    border: none; background: transparent;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-left: 4px;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .list-card-delete:active { color: #ef4444; }
+
+  .new-list-form { margin-top: 12px; }
+  .new-list-form input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    background: var(--card);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .new-list-form input:focus { outline: none; border-color: var(--accent); }
+  .new-list-form input::placeholder { color: var(--text-secondary); }
+
+  /* ─── Footer ─────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 28px 16px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* ─── Toast ──────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 200;
+    white-space: nowrap;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── Animations ─────────────────────────────── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .store-section { animation: fadeIn 0.25s ease; }
+
+  @media (max-width: 420px) {
+    .container { padding: 10px 10px 0; }
+    .header { gap: 6px; }
+    .list-selector { max-width: 140px; padding: 5px 10px; }
+    .header-brand h1 { font-size: 18px; }
+    .icon-btn { width: 32px; height: 32px; font-size: 16px; }
+    .item { padding: 12px 12px; min-height: 44px; }
+    .store-header { padding: 12px 12px 8px; }
+    .store-bar { margin: 0 12px 4px; }
+    .modal { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- ─── Header ─────────────────────────────── -->
+  <div class="header">
+    <div class="header-brand" onclick="toggleListManager()">
+      <span style="font-size:22px">🛒</span>
+      <h1>Seznam</h1>
+    </div>
+    <div class="list-selector" onclick="toggleListManager()" id="listSelector">
+      <span class="name" id="selectorName">Můj seznam</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn share-btn" onclick="openShareDialog()" id="shareBtn" title="Sdílet">📤</button>
+      <button class="icon-btn" onclick="showImport()" id="editBtn" title="Upravit">✏️</button>
+    </div>
+  </div>
+
+  <!-- ─── List View ──────────────────────────── -->
+  <div class="view active" id="listView">
+    <!-- URL import banner (shown when list loaded from shared link) -->
+    <div id="hashBanner" style="display:none"></div>
+
+    <div id="overallProgress" class="overall-progress" style="display:none">
+      <div class="overall-stats">
+        <span class="count">Hotovo <strong id="doneCount">0</strong> / <strong id="totalCount">0</strong></span>
+        <span class="pct" id="pctDisplay">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="overallBar"></div></div>
+    </div>
+
+    <div class="actions-row" id="listActions" style="display:none">
+      <button class="btn btn-secondary btn-sm" onclick="clearChecked()">🗑 Hotové</button>
+      <button class="btn btn-secondary btn-sm" onclick="showImport()">📝 Upravit</button>
+    </div>
+
+    <div id="listContent"></div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="emoji">📋</div>
+      <h2>Žádný seznam</h2>
+      <p>Vytvořte si svůj první nákupní seznam.</p>
+      <button class="btn btn-primary btn-block" onclick="createNewList()">+ Nový seznam</button>
+    </div>
+
+    <div class="footer">
+      Data se ukládají jen ve vašem prohlížeči 🛡️
+    </div>
+  </div>
+
+  <!-- ─── Import View ────────────────────────── -->
+  <div class="view import-view" id="importView">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button class="btn btn-secondary btn-sm" onclick="cancelImport()">← Zpět</button>
+      <span style="font-size:16px;font-weight:600" id="importTitle">Upravit seznam</span>
+    </div>
+    <div class="import-hint">
+      <strong>Formát:</strong> Nadpis = obchod, <code>[ ]</code> = položka.<br>
+      <code>[x]</code> = už hotová položka.
+    </div>
+    <textarea id="listInput" placeholder="Lidl
+[ ] mléko
+[ ] chleba
+
+Kaufland
+[ ] rýže"></textarea>
+    <div class="import-actions">
+      <button class="btn btn-primary btn-block" onclick="importList()">✓ Uložit seznam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal: Share (action sheet) ──────────── -->
+<div class="modal-overlay" id="shareDialog">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📤 Sdílet seznam</h2>
+      <button class="modal-close" onclick="closeShareDialog()">✕</button>
+    </div>
+
+    <div id="shareUrlOption" class="share-option" onclick="shareViaUrl()">
+      <div class="share-option-icon url">🔗</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Sdílet odkazem</div>
+        <div class="share-option-desc">Vygeneruje odkaz — pošlete ho přes WhatsApp, Messenger…</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="exportFile()">
+      <div class="share-option-icon file">📁</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Exportovat soubor</div>
+        <div class="share-option-desc">Stáhne .txt soubor k odeslání nebo zálohování</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="copyTextOnly()">
+      <div class="share-option-icon text">📋</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Zkopírovat text</div>
+        <div class="share-option-desc">Zkopíruje seznam jako text do schránky</div>
+      </div>
+    </div>
+
+    <div class="share-option" onclick="importFile()">
+      <div class="share-option-icon import">📂</div>
+      <div class="share-option-info">
+        <div class="share-option-title">Importovat soubor</div>
+        <div class="share-option-desc">Nahrát .txt seznam od někoho jiného</div>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary btn-block" onclick="closeShareDialog()" style="margin-top:8px">Zrušit</button>
+  </div>
+</div>
+
+<!-- ─── Modal: List Manager ─────────────────── -->
+<div class="modal-overlay" id="listManager">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📂 Moje seznamy</h2>
+      <button class="modal-close" onclick="closeListManager()">✕</button>
+    </div>
+    <div id="listManagerContent"></div>
+    <div class="new-list-form">
+      <input type="text" id="newListName" placeholder="Název nového seznamu…" maxlength="60">
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="createNewList()">+ Vytvořit seznam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal: Confirm Delete ───────────────── -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>⚠️ Smazat seznam?</h2>
+      <button class="modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <p style="color:var(--text-secondary);margin-bottom:16px" id="confirmText"></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeConfirm()">Zrušit</button>
+      <button class="btn btn-danger" style="flex:1" id="confirmDeleteBtn">Smazat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Hidden file input ───────────────────── -->
+<input type="file" id="fileInput" accept=".txt" style="display:none" onchange="handleFileImport(event)">
+
+<!-- ─── Toast ───────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────────────────
+const STORAGE_KEY = 'nakupni-seznam-v2';
+const APP_URL = 'https://czechtechgeek.github.io/nakupni-seznam/';
+
+let appData = { lists: [], activeListId: null };
+let listIdCounter = 0;
+
+// Store emoji mapping
+const STORE_EMOJIS = {
+  'lidl': '🟡', 'kaufland': '🔵', 'dm': '🟣', 'penny': '🔴',
+  'tesco': '🔵', 'billa': '🟢', 'albert': '🟠', 'globus': '🟢',
+  'makro': '🔵', 'košík': '🟢', 'rohlík': '🟠', 'coop': '🟢',
+  'jednota': '🟢', 'normal': '🔵', 'ikea': '🟡', 'hornbach': '🟠',
+  'obi': '🟠', 'action': '🔴', 'tchibo': '🟢',
+};
+const DEFAULT_EMOJI = '🛒';
+
+function getStoreEmoji(name) {
+  const lower = name.toLowerCase().trim();
+  for (const [key, emoji] of Object.entries(STORE_EMOJIS)) {
+    if (lower === key || lower.startsWith(key)) return emoji;
+  }
+  return DEFAULT_EMOJI;
+}
+
+// ─── Persistence ───────────────────────────────────────
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.lists && Array.isArray(parsed.lists)) {
+        appData = parsed;
+        for (const list of parsed.lists) {
+          const n = parseInt(list.id);
+          if (n >= listIdCounter) listIdCounter = n + 1;
+        }
+        return;
+      }
+    }
+  } catch (e) { /* ignore */ }
+  appData = { lists: [], activeListId: null };
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+// ─── List helpers ──────────────────────────────────────
+function getActiveList() {
+  return appData.lists.find(l => l.id === appData.activeListId) || null;
+}
+
+function genId() { return String(listIdCounter++); }
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'právě teď';
+  if (diffMins < 60) return `před ${diffMins} min`;
+  if (diffHours < 24) return `před ${diffHours} h`;
+  if (diffDays === 1) return 'včera';
+  if (diffDays < 7) return `před ${diffDays} dny`;
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Import / Parse ────────────────────────────────────
+function parseList(text) {
+  const lines = text.split('\n');
+  const stores = [];
+  let currentStore = null;
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.trim() === '') continue;
+
+    const checkboxMatch = line.match(/^\[( |x|X| )\]\s*(.+)/);
+    if (checkboxMatch) {
+      const checked = checkboxMatch[1].toLowerCase() === 'x';
+      const itemText = checkboxMatch[2].trim();
+      if (!currentStore) {
+        currentStore = { name: 'Ostatní', items: [] };
+        stores.push(currentStore);
+      }
+      currentStore.items.push({ text: itemText, checked });
+    } else {
+      let name = line.replace(/^[:*\s]+/, '').replace(/[:*\s]+$/, '').trim();
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+      currentStore = { name: name || 'Ostatní', items: [] };
+      stores.push(currentStore);
+    }
+  }
+  return { stores };
+}
+
+function serializeList(list) {
+  const lines = [];
+  for (const store of list.stores) {
+    lines.push(store.name);
+    for (const item of store.items) {
+      lines.push(`[${item.checked ? 'x' : ' '}] ${item.text}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n').trimEnd();
+}
+
+// ─── Import action ─────────────────────────────────────
+function importList() {
+  const textarea = document.getElementById('listInput');
+  const text = textarea.value.trim();
+  if (!text) { showToast('❌ Vložte položky'); return; }
+
+  const list = getActiveList();
+  if (!list) { showToast('❌ Žádný aktivní seznam'); return; }
+
+  const parsed = parseList(text);
+  list.stores = parsed.stores;
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+  showToast('✅ Seznam uložen');
+}
+
+// ─── List management ───────────────────────────────────
+function createNewList(name) {
+  const input = document.getElementById('newListName');
+  const listName = (name || input.value || '').trim() || `Seznam ${appData.lists.length + 1}`;
+  input.value = '';
+
+  const newList = {
+    id: genId(),
+    name: listName,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: [],
+  };
+  appData.lists.push(newList);
+  appData.activeListId = newList.id;
+  saveData();
+  closeListManager();
+  render();
+}
+
+function switchList(id) {
+  appData.activeListId = id;
+  saveData();
+  closeListManager();
+  render();
+}
+
+function deleteList(id) {
+  const list = appData.lists.find(l => l.id === id);
+  if (!list) return;
+  closeConfirm();
+  appData.lists = appData.lists.filter(l => l.id !== id);
+  if (appData.activeListId === id) {
+    appData.activeListId = appData.lists.length > 0 ? appData.lists[0].id : null;
+  }
+  saveData();
+  render();
+  showToast(`🗑 Seznam smazán`);
+}
+
+function confirmDeleteList(id) {
+  const list = appData.lists.find(l => l.id === id);
+  if (!list) return;
+  document.getElementById('confirmText').textContent = `Opravdu chcete smazat seznam "${list.name}"? Všechny položky budou ztraceny.`;
+  document.getElementById('confirmDeleteBtn').onclick = () => deleteList(id);
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
+// ─── List Manager Modal ────────────────────────────────
+function toggleListManager() {
+  const el = document.getElementById('listManager');
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) {
+    renderListManager();
+    document.getElementById('newListName').focus();
+  }
+}
+
+function closeListManager() {
+  document.getElementById('listManager').classList.remove('active');
+}
+
+function renderListManager() {
+  const container = document.getElementById('listManagerContent');
+  if (appData.lists.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Zatím žádné seznamy</p>';
+    return;
+  }
+  let html = '';
+  for (const list of appData.lists) {
+    const totalItems = list.stores.reduce((s, st) => s + st.items.length, 0);
+    const doneItems = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+    const isActive = list.id === appData.activeListId;
+    html += `<div class="list-card${isActive ? ' active' : ''}" onclick="switchList('${list.id}')">
+      <div class="list-card-info">
+        <div class="list-card-name">${escapeHtml(list.name)}</div>
+        <div class="list-card-meta">${formatDate(list.updatedAt)} · ${totalItems} položek${totalItems > 0 ? ` (${doneItems} hotovo)` : ''}</div>
+      </div>
+      ${isActive ? '<span class="list-card-badge">Aktivní</span>' : ''}
+      <button class="list-card-delete" onclick="event.stopPropagation();confirmDeleteList('${list.id}')" title="Smazat">🗑</button>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ─── SHARE & EXPORT / IMPORT ───────────────────────────
+
+// Open share dialog (action sheet)
+function openShareDialog() {
+  const list = getActiveList();
+  if (!list || list.stores.length === 0) { showToast('❌ Nic ke sdílení'); return; }
+  document.getElementById('shareDialog').classList.add('active');
+}
+
+function closeShareDialog() {
+  document.getElementById('shareDialog').classList.remove('active');
+}
+
+// ─── 1) Share via URL ─────────────────────────
+function shareViaUrl() {
+  const list = getActiveList();
+  if (!list) return;
+
+  const data = {
+    n: list.name,
+    s: list.stores.map(st => ({
+      n: st.name,
+      i: st.items.map(it => ({ t: it.text, c: it.checked }))
+    }))
+  };
+
+  // Compact base64 encoding with Unicode support
+  const json = JSON.stringify(data);
+  const bytes = new TextEncoder().encode(json);
+  const binary = String.fromCharCode(...bytes);
+  const encoded = btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const url = APP_URL + '#v1:' + encoded;
+
+  closeShareDialog();
+
+  // On mobile — use Web Share API to share the URL natively
+  if (navigator.share) {
+    navigator.share({
+      title: `Nákupní seznam: ${list.name}`,
+      text: `🛒 Sdílím ti nákupní seznam "${list.name}"`,
+      url: url,
+    }).catch(() => {});
+  } else {
+    // Desktop — copy URL to clipboard
+    copyToClipboard(url);
+    showToast('🔗 Odkaz zkopírován');
+  }
+}
+
+// ─── 2) Export as .txt file ───────────────────
+function exportFile() {
+  const list = getActiveList();
+  if (!list) return;
+  closeShareDialog();
+
+  const text = serializeList(list);
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${list.name.replace(/[^a-zá-ž0-9]/gi, '_')}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+  showToast('📁 Soubor stažen');
+}
+
+// ─── 3) Copy text ─────────────────────────────
+function copyTextOnly() {
+  const list = getActiveList();
+  if (!list) return;
+  closeShareDialog();
+  shareAsText(list);
+}
+
+function shareAsText(list) {
+  const total = list.stores.reduce((s, st) => s + st.items.length, 0);
+  const done = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+
+  let text = `🛒 ${list.name}\n`;
+  text += `${'─'.repeat(Math.min(list.name.length + 4, 24))}\n📊 ${done}/${total} hotovo\n\n`;
+
+  for (const store of list.stores) {
+    const emoji = getStoreEmoji(store.name);
+    text += `${emoji} ${store.name}\n`;
+    for (const item of store.items) {
+      text += `${item.checked ? '✅' : '⬜'} ${item.text}\n`;
+    }
+    text += '\n';
+  }
+  text += `📱 Vyrobeno na ${APP_URL}`;
+
+  // On mobile — Web Share API
+  if (navigator.share) {
+    navigator.share({ title: list.name, text }).catch(() => {});
+  } else {
+    copyToClipboard(text);
+    showToast('📋 Text zkopírován');
+  }
+}
+
+// ─── 4) Import from .txt file ─────────────────
+function importFile() {
+  closeShareDialog();
+  document.getElementById('fileInput').click();
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = ''; // reset so same file can be re-imported
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result.trim();
+    if (!text) { showToast('❌ Prázdný soubor'); return; }
+
+    const list = getActiveList();
+    if (!list) {
+      // Create a new list automatically
+      const name = file.name.replace(/\.txt$/i, '').replace(/_/g, ' ');
+      createNewList(name);
+    }
+
+    const activeList = getActiveList();
+    if (!activeList) return;
+
+    const parsed = parseList(text);
+    activeList.stores = parsed.stores;
+    activeList.updatedAt = new Date().toISOString();
+    saveData();
+    render();
+    showToast(`✅ Načteno ze souboru: ${file.name}`);
+  };
+  reader.readAsText(file);
+}
+
+// ─── URL hash import ────────────────────────────────────
+function checkUrlHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+
+  // Format: #v1:base64data
+  if (!hash.startsWith('v1:')) return;
+
+  try {
+    const encoded = hash.slice(3);
+    // Restore base64url → base64
+    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    // Pad with =
+    const padding = 4 - (base64.length % 4);
+    const padded = padding < 4 ? base64 + '='.repeat(padding) : base64;
+
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    const data = JSON.parse(json);
+
+    if (!data || !data.s || !Array.isArray(data.s)) return;
+
+    const stores = data.s.map(st => ({
+      name: st.n || 'Ostatní',
+      items: (st.i || []).map(it => ({ text: it.t || '', checked: it.c || false }))
+    }));
+
+    const listName = data.n || 'Sdílený seznam';
+
+    // Show banner asking user to confirm import
+    const total = stores.reduce((s, st) => s + st.items.length, 0);
+    const storeNames = stores.map(st => st.name).join(', ');
+
+    const banner = document.getElementById('hashBanner');
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <h3>🔗 Sdílený seznam</h3>
+      <p><strong>${escapeHtml(listName)}</strong> — ${total} položek ${storeNames ? '· ' + escapeHtml(storeNames) : ''}</p>
+      <button class="btn btn-primary btn-sm" onclick="acceptSharedList()">✓ Načíst seznam</button>
+      <button class="btn btn-secondary btn-sm" onclick="dismissSharedList()">Zahodit</button>
+    `;
+
+    // Store the parsed data for later acceptance
+    window._sharedListData = { name: listName, stores };
+
+    // Clear hash so it doesn't re-trigger
+    window.location.hash = '';
+  } catch (e) {
+    console.warn('Failed to decode shared list:', e);
+  }
+}
+
+function acceptSharedList() {
+  const data = window._sharedListData;
+  if (!data) return;
+
+  document.getElementById('hashBanner').style.display = 'none';
+
+  // Create a new list from the shared data
+  const newList = {
+    id: genId(),
+    name: data.name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: data.stores,
+  };
+  appData.lists.push(newList);
+  appData.activeListId = newList.id;
+  saveData();
+  render();
+  showToast(`✅ Seznam "${data.name}" načten`);
+  window._sharedListData = null;
+}
+
+function dismissSharedList() {
+  document.getElementById('hashBanner').style.display = 'none';
+  window._sharedListData = null;
+}
+
+// ─── Clipboard helper ──────────────────────────────────
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* fail silently */ }
+  document.body.removeChild(ta);
+}
+
+// ─── Render ────────────────────────────────────────────
+function render() {
+  const list = getActiveList();
+
+  document.getElementById('selectorName').textContent = list ? list.name : '—';
+
+  const totalItems = list ? list.stores.reduce((s, st) => s + st.items.length, 0) : 0;
+
+  if (!list || totalItems === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('listContent').innerHTML = '';
+    document.getElementById('overallProgress').style.display = 'none';
+    document.getElementById('listActions').style.display = 'none';
+    document.getElementById('shareBtn').style.opacity = '0.4';
+    document.getElementById('editBtn').style.opacity = '0.4';
+    if (!list) {
+      document.querySelector('.empty-state .emoji').textContent = '📂';
+      document.querySelector('.empty-state h2').textContent = 'Žádné seznamy';
+      document.querySelector('.empty-state p').textContent = 'Vytvořte si svůj první nákupní seznam.';
+    } else {
+      document.querySelector('.empty-state .emoji').textContent = '📋';
+      document.querySelector('.empty-state h2').textContent = 'Prázdný seznam';
+      document.querySelector('.empty-state p').textContent = `"${escapeHtml(list.name)}" zatím nemá žádné položky.`;
+    }
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('overallProgress').style.display = 'block';
+  document.getElementById('listActions').style.display = 'flex';
+  document.getElementById('shareBtn').style.opacity = '1';
+  document.getElementById('editBtn').style.opacity = '1';
+
+  const doneTotal = list.stores.reduce((s, st) => s + st.items.filter(i => i.checked).length, 0);
+  const pct = Math.round((doneTotal / totalItems) * 100);
+  document.getElementById('doneCount').textContent = doneTotal;
+  document.getElementById('totalCount').textContent = totalItems;
+  document.getElementById('pctDisplay').textContent = pct + '%';
+  document.getElementById('overallBar').style.width = pct + '%';
+
+  let html = '';
+  for (let si = 0; si < list.stores.length; si++) {
+    const store = list.stores[si];
+    const done = store.items.filter(i => i.checked).length;
+    const total = store.items.length;
+    const storePct = total > 0 ? Math.round((done / total) * 100) : 0;
+    const emoji = getStoreEmoji(store.name);
+
+    html += `<div class="store-section">
+      <div class="store-header">
+        <span class="store-name"><span class="store-emoji">${emoji}</span>${escapeHtml(store.name)}</span>
+        <span class="store-progress"><strong>${done}</strong>/${total}</span>
+      </div>
+      <div class="store-bar"><div class="store-bar-fill" style="width:${storePct}%"></div></div>
+      <ul class="item-list">`;
+
+    for (let ii = 0; ii < store.items.length; ii++) {
+      const item = store.items[ii];
+      html += `<li class="item${item.checked ? ' checked' : ''}" onclick="toggleItem(${si},${ii})">
+        <span class="item-check">${item.checked ? '✓' : ''}</span>
+        <span class="item-text">${escapeHtml(item.text)}</span>
+      </li>`;
+    }
+    html += `</ul></div>`;
+  }
+  document.getElementById('listContent').innerHTML = html;
+}
+
+// ─── Actions ───────────────────────────────────────────
+function toggleItem(si, ii) {
+  const list = getActiveList();
+  if (!list || !list.stores[si] || !list.stores[si].items[ii]) return;
+  list.stores[si].items[ii].checked = !list.stores[si].items[ii].checked;
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+}
+
+function clearChecked() {
+  const list = getActiveList();
+  if (!list) return;
+  let cleared = 0;
+  for (const store of list.stores) {
+    const before = store.items.length;
+    store.items = store.items.filter(i => !i.checked);
+    cleared += before - store.items.length;
+  }
+  list.stores = list.stores.filter(s => s.items.length > 0);
+  list.updatedAt = new Date().toISOString();
+  saveData();
+  render();
+  if (cleared > 0) showToast(`✅ Smazáno ${cleared} hotových`);
+}
+
+function showImport() {
+  const list = getActiveList();
+  if (!list) { createNewList(); return; }
+
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('importView').classList.add('active');
+  document.getElementById('importTitle').textContent = `✏️ ${escapeHtml(list.name)}`;
+
+  const textarea = document.getElementById('listInput');
+  textarea.value = list.stores.length > 0 ? serializeList(list) : '';
+  setTimeout(() => textarea.focus(), 100);
+}
+
+function cancelImport() {
+  if (getActiveList()) {
+    render();
+  } else {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('listContent').innerHTML = '';
+    document.getElementById('overallProgress').style.display = 'none';
+    document.getElementById('listActions').style.display = 'none';
+  }
+  document.getElementById('importView').classList.remove('active');
+  document.getElementById('listView').classList.add('active');
+}
+
+// ─── Toast ─────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ─── Helpers ──────────────────────────────────────────
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ─── Init ──────────────────────────────────────────────
+loadData();
+
+if (appData.lists.length === 0) {
+  const defaultList = {
+    id: genId(),
+    name: 'Můj seznam',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    stores: [],
+  };
+  appData.lists.push(defaultList);
+  appData.activeListId = defaultList.id;
+  saveData();
+}
+
+if (!getActiveList() && appData.lists.length > 0) {
+  appData.activeListId = appData.lists[0].id;
+  saveData();
+}
+
+render();
+
+// Check if the page was opened with a shared list URL
+checkUrlHash();
+</script>
+</body>
+</html>
