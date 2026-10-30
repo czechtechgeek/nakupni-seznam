@@ -570,7 +570,7 @@
       <button class="btn btn-primary btn-block" onclick="createNewList()">+ Nový seznam</button>
     </div>
 
-    <div class="footer">
+    <div class="footer" id="footer">
       Data se ukládají jen ve vašem prohlížeči 🛡️
     </div>
   </div>
@@ -682,6 +682,19 @@ Kaufland
 const STORAGE_KEY = 'nakupni-seznam-v2';
 const APP_URL = 'https://czechtechgeek.github.io/nakupni-seznam/';
 
+// Server (HA add-on). Pod ingress je aplikace na /api/hassio_ingress/<token>/,
+// přímý port i GitHub Pages jsou bez prefixu.
+const ING = (location.pathname.match(/^\/api\/hassio_ingress\/[^/]+/) || [''])[0];
+const API = ING + '/api';
+const HAS_SERVER = /^https?:$/.test(location.protocol);
+
+let serverVersion = 0;
+let saveTimer = null;
+let saving = false;
+let pendingSave = false;
+let lastRemoteUser = null;
+let serverOnline = false;
+
 let appData = { lists: [], activeListId: null };
 let listIdCounter = 0;
 
@@ -724,6 +737,106 @@ function loadData() {
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  queueSave();
+}
+
+// ─── Sync se serverem (sdílení mezi uživateli HA) ──────
+function saveLocalOnly() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+function queueSave() {
+  if (!HAS_SERVER) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushState, 400);
+}
+
+function mergeData(local, remote) {
+  const byId = new Map();
+  const consider = (l) => {
+    const cur = byId.get(l.id);
+    if (!cur || (l.updatedAt || '') > (cur.updatedAt || '')) byId.set(l.id, l);
+  };
+  (remote && remote.lists || []).forEach(consider);
+  (local && local.lists || []).forEach(consider);
+
+  const del = new Map();
+  for (const d of [...(local && local.deleted || []), ...(remote && remote.deleted || [])]) del.set(d.id, d);
+  for (const id of del.keys()) byId.delete(id);
+
+  const lists = [...byId.values()];
+  let active = (local && local.activeListId) || (remote && remote.activeListId) || null;
+  if (!lists.find(l => l.id === active)) active = lists.length ? lists[0].id : null;
+
+  return {
+    lists,
+    activeListId: active,
+    deleted: [...del.values()].slice(-50),
+    lastStore: (local && local.lastStore) || (remote && remote.lastStore) || null,
+  };
+}
+
+function updateFooter() {
+  const el = document.getElementById('footer');
+  if (!el) return;
+  if (serverOnline) {
+    let t = 'Společný seznam · uloženo v Home Assistantu';
+    if (lastRemoteUser && lastRemoteUser !== 'unknown') t += ' · naposledy ' + lastRemoteUser;
+    el.textContent = t;
+  } else {
+    el.textContent = 'Data se ukládají jen ve vašem prohlížeči 🛡️';
+  }
+}
+
+async function pushState() {
+  if (!HAS_SERVER) return;
+  if (saving) { pendingSave = true; return; }
+  saving = true;
+  try {
+    const r = await fetch(API + '/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: appData, base: serverVersion }),
+    });
+    if (r.status === 409) {
+      const cur = await r.json();
+      appData = mergeData(appData, cur.data);
+      serverVersion = cur.version || 0;
+      saveLocalOnly();
+      render();
+      pendingSave = true;
+    } else if (r.ok) {
+      const j = await r.json();
+      serverVersion = j.version || serverVersion;
+      if (j.updatedBy) lastRemoteUser = j.updatedBy;
+      serverOnline = true;
+    }
+  } catch (e) { serverOnline = false; /* offline — zůstává localStorage */ }
+  updateFooter();
+  saving = false;
+  if (pendingSave) { pendingSave = false; queueSave(); }
+}
+
+async function pullState(initial) {
+  if (!HAS_SERVER) return;
+  try {
+    const r = await fetch(API + '/state', { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    serverOnline = true;
+    if (j.data && j.data.lists) {
+      if ((j.version || 0) !== serverVersion) {
+        appData = mergeData(appData, j.data);
+        serverVersion = j.version || 0;
+        saveLocalOnly();
+        if (!initial) render();
+      }
+      lastRemoteUser = j.updatedBy || lastRemoteUser;
+    } else if (initial && appData.lists.length) {
+      queueSave();   // server je prázdný → nahraj lokální data
+    }
+  } catch (e) { serverOnline = false; }
+  updateFooter();
 }
 
 // ─── List helpers ──────────────────────────────────────
@@ -838,6 +951,7 @@ function deleteList(id) {
   if (!list) return;
   closeConfirm();
   appData.lists = appData.lists.filter(l => l.id !== id);
+  appData.deleted = [...(appData.deleted || []), { id: id, at: new Date().toISOString() }].slice(-50);
   if (appData.activeListId === id) {
     appData.activeListId = appData.lists.length > 0 ? appData.lists[0].id : null;
   }
@@ -1335,30 +1449,39 @@ function escapeHtml(str) {
 }
 
 // ─── Init ──────────────────────────────────────────────
-loadData();
+async function boot() {
+  loadData();
+  await pullState(true);
 
-if (appData.lists.length === 0) {
-  const defaultList = {
-    id: genId(),
-    name: 'Můj seznam',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    stores: [],
-  };
-  appData.lists.push(defaultList);
-  appData.activeListId = defaultList.id;
+  if (appData.lists.length === 0) {
+    const defaultList = {
+      id: genId(),
+      name: 'Můj seznam',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      stores: [],
+    };
+    appData.lists.push(defaultList);
+    appData.activeListId = defaultList.id;
+  }
+
+  if (!getActiveList() && appData.lists.length > 0) {
+    appData.activeListId = appData.lists[0].id;
+  }
+
+  render();
+  checkUrlHash();
   saveData();
+  updateFooter();
+
+  if (HAS_SERVER) {
+    setInterval(pullState, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
+    window.addEventListener('online', () => { pullState(); });
+  }
 }
 
-if (!getActiveList() && appData.lists.length > 0) {
-  appData.activeListId = appData.lists[0].id;
-  saveData();
-}
-
-render();
-
-// Check if the page was opened with a shared list URL
-checkUrlHash();
+boot();
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 name: "Nákupní seznam"
-version: "1.1.0"
+version: "2.0.0"
 slug: "nakupni_seznam"
-description: "Jednoduchý nákupní seznam do postranního panelu Home Assistantu"
+description: "Společný nákupní seznam pro všechny uživatele Home Assistantu"
 url: "https://github.com/czechtechgeek/nakupni-seznam"
 arch:
   - aarch64

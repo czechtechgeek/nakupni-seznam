@@ -1,6 +1,6 @@
 # 🛒 Nákupní seznam
 
-Jednoduchý nákupní seznam jako jediná HTML stránka — bez serveru, bez databáze, bez závislostí. Data se ukládají do `localStorage` prohlížeče.
+Nákupní seznam do prohlížeče i do Home Assistantu. Jako add-on drží data na serveru, takže **seznam vidí všichni uživatelé HA**; samotná stránka funguje i offline díky `localStorage` jako záloze.
 
 ## Co umí
 
@@ -8,12 +8,12 @@ Jednoduchý nákupní seznam jako jediná HTML stránka — bez serveru, bez dat
 - Rychlé přidání tlačítkem **+** (Enter funguje taky) a odebrání tlačítkem **−** u každé položky
 - Odškrtávání nakoupeného, mazání, řazení
 - Světlý a tmavý režim podle nastavení systému
-- Funguje offline (vše je v jednom souboru)
+- Funguje offline (stav se ukládá i do `localStorage`)
 
 ## Použití
 
 - **V prohlížeči:** otevři `index.html` (nebo GitHub Pages)
-- **Home Assistant:** jako add-on z tohoto repozitáře — viz níže
+- **Home Assistant:** jako add-on z tohoto repozitáře — společný seznam pro všechny uživatele, viz níže
 
 ## Instalace do Home Assistant
 
@@ -24,17 +24,31 @@ Repozitář je zároveň **add-on repository**:
 3. Přidat `https://github.com/czechtechgeek/nakupni-seznam`
 4. Obnovit obchod → **Nákupní seznam** → **Nainstalovat** → **Spustit**
 
-Po startu je aplikace v postranním panelu **Nákupy**. Add-on běží na portu **8091** (ingress), takže je dostupná i přímo na `http://homeassistant.local:8091`.
+Po startu je aplikace v postranním panelu **Nákupy** a je dostupná i přímo na `http://homeassistant.local:8091`.
+
+### Sdílení mezi uživateli
+
+Add-on ukládá seznamy do SQLite v `/data/nakupni.db`. Všichni uživatelé HA (i různé prohlížeče a telefony) tedy vidí **stejné seznamy** a změny se projeví do 5 sekund. Data přežijí restart i update add-onu.
+
+API:
+
+```http
+GET /api/state              → {"version": 3, "data": {...}, "updatedBy": "jan"}
+PUT /api/state              {"data": {...}, "base": 3} → 200, nebo 409 při konfliktu
+GET /healthz                → {"ok": true, "version": 3}
+```
 
 ## Struktura
 
 ```
-index.html            vlastní aplikace (jediný soubor)
+index.html            vlastní aplikace (jediný soubor, localStorage + sync)
+backend/app.py        Flask API + SQLite (jen pro add-on)
+backend/requirements.txt
 addon/                Home Assistant add-on
   config.yaml         metadata, ingress, port 8091
-  Dockerfile          nginx:alpine + statické soubory
-  nginx.conf          SPA fallback (funguje i s ingress prefixem)
-  app/index.html      generovaná kopie (packaging/sync_addon.sh)
+  Dockerfile          python:3.12-alpine
+  run.sh              spuštění, DB v /data
+  src/                generováno (packaging/sync_addon.sh)
   icon.png, logo.png
 repository.yaml       registrace repozitáře v HA
 packaging/sync_addon.sh
@@ -44,10 +58,13 @@ tools/make_icons.py
 ## Vývoj
 
 ```bash
-./packaging/sync_addon.sh          # zkopíruje index.html do addonu
-cd addon && docker build -t nakupni-seznam . && docker run -p 8091:8091 nakupni-seznam
+./packaging/sync_addon.sh          # zkopíruje index.html + backend do addonu
+cd addon && docker build -t nakupni-seznam . \
+  && docker run -p 8091:8091 -v /tmp/nakupni-data:/data nakupni-seznam
 ```
 
 ## Poznámka k datům
 
-Seznam je uložen v prohlížeči (localStorage), takže **se nesynchronizuje mezi zařízeními**. V HA ingressu i na přímém portu jde o jiný origin — každý má vlastní seznam. Pokud budeš chtít sdílení mezi telefonem a PC, je potřeba serverová část (SQLite + API).
+- **Add-on:** data jsou v `/data/nakupni.db`, společná pro všechny uživatele HA.
+- **Statická verze (GitHub Pages):** data jen v `localStorage` prohlížeče, bez sdílení.
+- Při konfliktu (dva lidé upravují současně) vyhraje novější verze seznamu podle `updatedAt`; smazané seznamy se nevrátí (tombstones).
